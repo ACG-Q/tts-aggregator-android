@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 电池优化白名单（权限管理页申请，保证系统 TTS 服务保活） -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TtsAggregator">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TtsAggregator"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 系统 TTS 引擎（URL TTS） -->
+        <service
+            android:name=".tts.AggregatorTtsService"
+            android:exported="true"
+            android:permission="android.permission.BIND_TEXT_TO_SPEECH"
+            android:label="TTS Aggregator">
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.TTS_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.speech.tts.engine"
+                android:resource="@xml/tts_engine" />
+        </service>
+
+    </application>
+</manifest>
