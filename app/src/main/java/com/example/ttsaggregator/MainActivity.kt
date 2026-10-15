@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.ttsaggregator.localserver.LocalServerService
 import com.example.ttsaggregator.navigation.AppNav
 import com.example.ttsaggregator.ui.ProvideAppContainer
 import com.example.ttsaggregator.ui.theme.AppTheme
@@ -25,6 +26,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 通知点击（EXTRA_OPEN_SETTINGS）直达设置页；旋转重建后不再强制跳转
+        val openSettings = savedInstanceState == null &&
+            intent.getBooleanExtra(LocalServerService.EXTRA_OPEN_SETTINGS, false)
+
         setContent {
             AppTheme {
                 ProvideAppContainer {
@@ -32,7 +37,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background,
                     ) {
-                        AppNav(onPlay = ::play, onToast = ::toast)
+                        AppNav(onPlay = ::play, onToast = ::toast, openSettings = openSettings)
                     }
                 }
             }

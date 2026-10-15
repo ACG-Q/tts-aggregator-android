@@ -1,6 +1,7 @@
 package com.example.ttsaggregator.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -21,9 +22,15 @@ import com.example.ttsaggregator.ui.screens.VoiceScreen
 fun AppNav(
     onPlay: (ByteArray) -> Unit,
     onToast: (String) -> Unit,
+    openSettings: Boolean = false,
 ) {
     val nav: NavViewModel = viewModel()
     val screen by nav.screen.collectAsState()
+
+    // 通知点击直达设置页（仅首个组合生效，旋转后 savedInstanceState 已置 false）
+    LaunchedEffect(openSettings) {
+        if (openSettings) nav.goSettings()
+    }
 
     when (screen) {
         is Screen.Home -> HomeScreen(
@@ -48,6 +55,7 @@ fun AppNav(
         )
         is Screen.Settings -> SettingsScreen(
             onBack = nav::goHome,
+            onToast = onToast,
             onOpenPermissions = nav::goPermissions,
             onOpenAdmin = nav::goAdmin,
             onOpenAbout = nav::goAbout,
