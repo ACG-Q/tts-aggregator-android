@@ -85,4 +85,65 @@ class LocalTtsRequestHandlerTest {
         assertEquals(502, r.code)
         assertTrue(r.message.contains("节点全部不可用"))
     }
+
+    // ---------- POST ----------
+
+    @Test
+    fun `POST 完整 JSON 合成成功`() {
+        var cap: SynthPrefs? = null
+        val r = handler { _, p ->
+            cap = p
+            Result.success(mp3)
+        }.handlePost("""{"text":"你好","voice":"v2","rate":30,"pitch":10,"style":"sad"}""")
+        assertArrayEquals(mp3, (r as TtsResult.Audio).bytes)
+        val c = cap ?: error("未调用合成")
+        assertEquals("v2", c.voice)
+        assertEquals(30, c.rate)
+        assertEquals(10, c.pitch)
+        assertEquals("sad", c.style)
+    }
+
+    @Test
+    fun `POST 缺省字段回退应用默认`() {
+        var cap: SynthPrefs? = null
+        handler { _, p ->
+            cap = p
+            Result.success(mp3)
+        }.handlePost("""{"text":"hi"}""")
+        val c = cap ?: error("未调用合成")
+        assertEquals("default-voice", c.voice)
+        assertEquals(10, c.rate)
+        assertEquals(-5, c.pitch)
+        assertEquals("", c.style)
+    }
+
+    @Test
+    fun `POST 非法 JSON 返回 400 并提示 JSON`() {
+        val r = handler().handlePost("{oops") as TtsResult.Error
+        assertEquals(400, r.code)
+        assertTrue(r.message.contains("JSON"))
+    }
+
+    @Test
+    fun `POST 缺 text 字段返回 400`() {
+        val r = handler().handlePost("{}") as TtsResult.Error
+        assertEquals(400, r.code)
+    }
+
+    @Test
+    fun `POST 空文本返回 400`() {
+        val r = handler().handlePost("""{"text":"  "}""") as TtsResult.Error
+        assertEquals(400, r.code)
+    }
+
+    @Test
+    fun `POST rate 越界钳制为 -100`() {
+        var cap: SynthPrefs? = null
+        handler { _, p ->
+            cap = p
+            Result.success(mp3)
+        }.handlePost("""{"text":"x","rate":-999}""")
+        val c = cap ?: error("未调用合成")
+        assertEquals(-100, c.rate)
+    }
 }
