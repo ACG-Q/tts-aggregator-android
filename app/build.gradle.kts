@@ -51,4 +51,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
     // 调试工具
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // JVM 单元测试
+    testImplementation("junit:junit:4.13.2")
 }
