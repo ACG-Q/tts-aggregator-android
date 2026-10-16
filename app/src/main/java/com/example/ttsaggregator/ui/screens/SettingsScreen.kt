@@ -1,17 +1,10 @@
 package com.example.ttsaggregator.ui.screens
 
-import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,15 +23,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,11 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.ttsaggregator.appContainer
-import com.example.ttsaggregator.localserver.LocalServerService
-import com.example.ttsaggregator.localserver.ServerStatus
 import com.example.ttsaggregator.ui.components.AppCard
 import com.example.ttsaggregator.ui.components.NavRow
 import com.example.ttsaggregator.ui.components.SectionHeader
@@ -63,7 +48,6 @@ import com.example.ttsaggregator.ui.components.SectionHeader
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onToast: (String) -> Unit,
     onOpenPermissions: () -> Unit,
     onOpenAdmin: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -111,7 +95,6 @@ fun SettingsScreen(
                 subtitle = "应用简介 · 基于 zuoban/tts · 开源许可",
                 onClick = onOpenAbout,
             )
-            LocalServerCard(onToast = onToast)
             AppCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -122,109 +105,6 @@ fun SettingsScreen(
                     Spacer(Modifier.width(10.dp))
                     Text("版本 $version", style = MaterialTheme.typography.bodyMedium)
                 }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------- 本机服务卡片
-
-@Composable
-private fun LocalServerCard(onToast: (String) -> Unit) {
-    val context = LocalContext.current
-    val settings = context.appContainer.settings
-    val config by settings.localServerConfig.collectAsState()
-    val status by LocalServerService.status.collectAsState()
-    var portText by remember(config.port) { mutableStateOf(config.port.toString()) }
-
-    val notifLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            settings.saveLocalServerConfig(config.copy(enabled = true))
-            context.startForegroundService(Intent(context, LocalServerService::class.java))
-        } else {
-            onToast("未授予通知权限，无法常驻，服务无法开启")
-        }
-    }
-
-    AppCard {
-        SectionHeader("本机服务")
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "开启后，同一台设备上的其他 App 可通过 http://127.0.0.1:${config.port}/tts " +
-                "使用本应用的节点池合成语音；仅监听本机回环地址，无需鉴权。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        val running = status as? ServerStatus.Running
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                if (running != null) "运行中 · http://127.0.0.1:${running.port}/tts" else "未开启",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.weight(1f))
-            Switch(
-                checked = status is ServerStatus.Running,
-                onCheckedChange = { enable ->
-                    try {
-                        if (enable) {
-                            if (Build.VERSION.SDK_INT >= 33 &&
-                                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                                    PackageManager.PERMISSION_GRANTED
-                            ) {
-                                notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                settings.saveLocalServerConfig(config.copy(enabled = true))
-                                context.startForegroundService(Intent(context, LocalServerService::class.java))
-                            }
-                        } else {
-                            context.startService(
-                                Intent(context, LocalServerService::class.java).apply {
-                                    action = LocalServerService.ACTION_STOP
-                                },
-                            )
-                        }
-                    } catch (e: Exception) {
-                        onToast("操作失败：${e.message}")
-                    }
-                },
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            OutlinedTextField(
-                value = portText,
-                onValueChange = { raw ->
-                    val filtered = raw.filter { it.isDigit() }.take(5)
-                    portText = filtered
-                    filtered.toIntOrNull()?.let { p ->
-                        if (p in 1024..65535) {
-                            settings.saveLocalServerConfig(config.copy(port = p))
-                        }
-                    }
-                },
-                enabled = status !is ServerStatus.Running,
-                singleLine = true,
-                modifier = Modifier.width(150.dp),
-                label = { Text("端口 1024–65535") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = {
-                val url = "http://127.0.0.1:${config.port}/tts"
-                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                cm.setPrimaryClip(ClipData.newPlainText("TTS 接入地址", url))
-                onToast("已复制：$url")
-            }) {
-                Text("复制接入 URL")
             }
         }
     }

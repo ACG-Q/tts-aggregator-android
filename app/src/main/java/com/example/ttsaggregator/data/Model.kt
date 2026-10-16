@@ -142,13 +142,6 @@ data class SynthSettings(
     val voice: String = "", // 系统 TTS 音色（空 = 节点默认）
 )
 
-/** 本机 HTTP 服务配置（持久化；仅监听 127.0.0.1，端口由 UI 校验 1024..65535） */
-@Serializable
-data class LocalServerConfig(
-    val enabled: Boolean = false,
-    val port: Int = 8787,
-)
-
 /** 一条调用日志 */
 data class CallLog(
     val id: Long = 0,

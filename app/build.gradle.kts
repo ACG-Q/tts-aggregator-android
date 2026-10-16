@@ -46,13 +46,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
     // 网络
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // 本机 HTTP 服务（127.0.0.1 回环嵌入式服务器，Modified BSD 许可）
-    implementation("org.nanohttpd:nanohttpd:2.3.1")
     // 协程 + 序列化
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
     // 调试工具
     debugImplementation("androidx.compose.ui:ui-tooling")
-    // JVM 单元测试
-    testImplementation("junit:junit:4.13.2")
 }
