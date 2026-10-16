@@ -9,7 +9,6 @@ import com.example.ttsaggregator.data.NodeStore
 import com.example.ttsaggregator.data.SettingsStore
 import com.example.ttsaggregator.data.TtsApiClient
 import com.example.ttsaggregator.data.VoiceRepository
-import com.example.ttsaggregator.localserver.LocalTtsRequestHandler
 
 /**
  * 手写依赖容器（替代 Hilt）：
@@ -38,15 +37,6 @@ class AppContainer(context: Context) {
 
     // 调度层
     val nodePool = NodePool(nodeRepository, settings, logStore, api)
-
-    // 本机 HTTP 服务（纯逻辑 handler，合成仍走节点池；HTTP 线程内 runBlocking 桥接，
-    // 与 AggregatorTtsService 同款）
-    val localTtsHandler = LocalTtsRequestHandler(
-        defaults = { settings.synthSettings.value },
-        synthesize = { text, prefs ->
-            kotlinx.coroutines.runBlocking { nodePool.synthesize(text, prefs) }
-        },
-    )
 }
 
 class App : Application() {

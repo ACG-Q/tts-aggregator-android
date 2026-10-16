@@ -4,11 +4,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 电池优化白名单（权限管理页申请，保证系统 TTS 服务保活） -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- 本机 HTTP 服务（前台服务保活，targetSdk 34 要求声明类型） -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- Android 13+ 常驻通知运行时权限 -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".App"
@@ -44,12 +39,6 @@
                 android:name="android.speech.tts.engine"
                 android:resource="@xml/tts_engine" />
         </service>
-
-        <!-- 本机 HTTP 服务（同机 App 经 http://127.0.0.1:8787/tts 接入） -->
-        <service
-            android:name=".localserver.LocalServerService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
 
     </application>
 </manifest>

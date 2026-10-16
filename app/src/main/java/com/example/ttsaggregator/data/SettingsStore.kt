@@ -56,16 +56,6 @@ class SettingsStore(context: Context) {
         synchronized(this) { saveSynthSettings(transform(_synthSettings.value)) }
     }
 
-    // ---------- 本机 HTTP 服务 ----------
-
-    private val _localServerConfig = MutableStateFlow(read(KEY_LOCAL_SERVER) ?: LocalServerConfig())
-    val localServerConfig: StateFlow<LocalServerConfig> = _localServerConfig
-
-    fun saveLocalServerConfig(config: LocalServerConfig) {
-        prefs.edit().putString(KEY_LOCAL_SERVER, json.encodeToString(LocalServerConfig.serializer(), config)).apply()
-        _localServerConfig.value = config
-    }
-
     // ---------- 通用 JSON 读写（音色缓存等外部数据复用） ----------
 
     private inline fun <T> read(key: String, decode: (String) -> T): T? =
@@ -87,6 +77,5 @@ class SettingsStore(context: Context) {
         const val KEY_POOL = "pool_config"
         const val KEY_SETTINGS = "synth_settings"
         const val KEY_VOICES_CACHE = "voices_cache"
-        const val KEY_LOCAL_SERVER = "local_server"
     }
 }
