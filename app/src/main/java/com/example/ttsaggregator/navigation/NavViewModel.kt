@@ -18,19 +18,35 @@ sealed class Screen {
 
 /**
  * 纯导航状态：只管"当前在哪一屏"，不持有任何业务数据。
- * 屏幕之间用 go* 方法跳转，返回路径显式声明在各 go 方法里。
+ * 屏幕之间用 go* 方法跳转（同步压栈），handleBack 弹栈；
+ * 栈空时返回 false，由调用方（OnBackPressedDispatcher）决定是否 finish Activity。
  */
 class NavViewModel : ViewModel() {
 
     private val _screen = MutableStateFlow<Screen>(Screen.Home)
     val screen: StateFlow<Screen> = _screen
 
-    fun goHome() { _screen.value = Screen.Home }
-    fun goNodes() { _screen.value = Screen.Nodes }
-    fun goVoice() { _screen.value = Screen.Voice }
-    fun goLogs() { _screen.value = Screen.Logs }
-    fun goSettings() { _screen.value = Screen.Settings }
-    fun goPermissions() { _screen.value = Screen.Permissions }
-    fun goAdmin() { _screen.value = Screen.Admin }
-    fun goAbout() { _screen.value = Screen.About }
+    private var stack = mutableListOf<Screen>()
+
+    private fun push(screen: Screen) {
+        _screen.value = screen
+        stack.add(screen)
+    }
+
+    /** 弹栈返回；栈已空（停在 Home）返回 false。 */
+    fun handleBack(): Boolean {
+        if (stack.isEmpty()) return false
+        stack.removeLast()
+        _screen.value = stack.lastOrNull() ?: Screen.Home
+        return true
+    }
+
+    fun goHome() { _screen.value = Screen.Home; stack = mutableListOf() }
+    fun goNodes() = push(Screen.Nodes)
+    fun goVoice() = push(Screen.Voice)
+    fun goLogs() = push(Screen.Logs)
+    fun goSettings() = push(Screen.Settings)
+    fun goPermissions() = push(Screen.Permissions)
+    fun goAdmin() = push(Screen.Admin)
+    fun goAbout() = push(Screen.About)
 }
