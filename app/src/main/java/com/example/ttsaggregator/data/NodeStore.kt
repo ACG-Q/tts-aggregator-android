@@ -64,7 +64,7 @@ class NodeStore(context: Context) :
         put("base_url", baseUrl)
         put("label", label)
         put("keyless", if (keyless) 1 else 0)
-        put("api_key", apiKey) // null 会写入 NULL ✓
+        put("api_key", apiKey) // null 会写入 NULL
         put("health", health.ordinal)
         put("last_checked", lastChecked)
         put("default_voice", defaultVoice)

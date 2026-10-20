@@ -86,7 +86,7 @@ fun VoicePickerDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Text("✕", style = MaterialTheme.typography.titleMedium)
+                        Text("关闭", style = MaterialTheme.typography.titleMedium)
                     }
                     Text(
                         "选择声音",
@@ -215,7 +215,7 @@ fun VoicePickerDialog(
                                     if (styles.isEmpty()) {
                                         item {
                                             Text(
-                                                "⚠ 该声音不支持风格\n（应用时将不带 style 参数）",
+                                                "该声音不支持风格\n（应用时将不带 style 参数）",
                                                 modifier = Modifier.padding(vertical = 32.dp),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

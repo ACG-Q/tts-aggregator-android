@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -159,7 +160,7 @@ private fun VoiceEntryRow(vm: HomeViewModel, onOpenVoice: () -> Unit) {
     val voices by vm.voiceList.collectAsState()
     AppCard(onClick = onOpenVoice) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("🎭", style = MaterialTheme.typography.titleMedium)
+            Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -239,7 +240,7 @@ private fun CallModeCard(vm: HomeViewModel, onOpenNodes: () -> Unit) {
 
 @Composable
 private fun ModeSegment(mode: CallMode, onModeChange: (CallMode) -> Unit) {
-    val options = listOf(CallMode.AUTO to "⚡ 自动", CallMode.GROUP to "🔁 组轮询", CallMode.MANUAL to "🎯 手选")
+    val options = listOf(CallMode.AUTO to "自动", CallMode.GROUP to "组轮询", CallMode.MANUAL to "手选")
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,7 +287,7 @@ private fun SchedCard(vm: HomeViewModel) {
         when (config.mode) {
             CallMode.MANUAL -> {
                 val manual = vm.manualNode()
-                SchedHeader("🎯 手选", manual?.label?.ifBlank { shortUrl(manual.baseUrl, 20) } ?: "未选择节点")
+                SchedHeader("手选", manual?.label?.ifBlank { shortUrl(manual.baseUrl, 20) } ?: "未选择节点")
                 Spacer(Modifier.height(6.dp))
                 if (vm.manualStopped()) {
                     Row(
@@ -295,7 +296,7 @@ private fun SchedCard(vm: HomeViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            "🛑 连续失败 3 次，已停止调用",
+                            "连续失败 3 次，已停止调用",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -312,7 +313,7 @@ private fun SchedCard(vm: HomeViewModel) {
                 }
             }
             CallMode.GROUP -> {
-                SchedHeader("🔁 组轮询", "本次 → 下一个组内节点")
+                SchedHeader("组轮询", "本次 → 下一个组内节点")
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "组成员 ${config.groupIds.size} · 游标 #${config.groupCursor} · 成功后前进",
@@ -322,7 +323,7 @@ private fun SchedCard(vm: HomeViewModel) {
             }
             CallMode.AUTO -> {
                 val cooling = nodes.filter { it.isCoolingDown() }
-                SchedHeader("⚡ 自动", "候选 ${vm.activeCandidateCount()} 个 · 失败自动切换")
+                SchedHeader("自动", "候选 ${vm.activeCandidateCount()} 个 · 失败自动切换")
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "排序：健康 → 最近测试 · 连续失败 3 次冷却 10 分钟",
@@ -334,7 +335,7 @@ private fun SchedCard(vm: HomeViewModel) {
                     val n = cooling.first()
                     val remainSec = ((n.cooldownUntil - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
                     Text(
-                        "🧊 ${n.label.ifBlank { shortUrl(n.baseUrl, 18) }} 冷却中（${remainSec / 60}:${"%02d".format(remainSec % 60)} 后恢复）",
+                        "${n.label.ifBlank { shortUrl(n.baseUrl, 18) }} 冷却中（${remainSec / 60}:${"%02d".format(remainSec % 60)} 后恢复）",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
@@ -377,8 +378,6 @@ private fun RecentLogCard(vm: HomeViewModel, onOpenLogs: () -> Unit) {
             )
         } else {
             logs.forEach { log ->
-                val mark = if (log.success) "✓ ${formatLatency(log.latencyMs)}"
-                else "✗ ${log.error?.substringBefore(':') ?: "失败"}"
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                     Text(
                         com.example.ttsaggregator.ui.util.formatClock(log.time, "HH:mm"),
@@ -393,7 +392,7 @@ private fun RecentLogCard(vm: HomeViewModel, onOpenLogs: () -> Unit) {
                         maxLines = 1,
                     )
                     Text(
-                        mark,
+                        if (log.success) "成功 · ${formatLatency(log.latencyMs)}" else "失败 · ${log.error?.substringBefore(':') ?: "未知"}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = if (log.success) MaterialTheme.colorScheme.primary

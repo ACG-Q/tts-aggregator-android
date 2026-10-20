@@ -20,6 +20,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.List
@@ -507,7 +514,7 @@ private fun NodeExpandCard(
             modifier = Modifier.padding(top = 4.dp),
         ) {
             if (isTesting) {
-                Badge("⏳ 测试中…", StatusColors.Info)
+                Badge("测试中…", StatusColors.Info)
             }
             ApiBadge(node.apiVersion)
             HealthBadge(node.health)
@@ -519,7 +526,7 @@ private fun NodeExpandCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (node.isCoolingDown()) Badge("🧊 冷却中", StatusColors.Warn)
+            if (node.isCoolingDown()) Badge("冷却中", StatusColors.Warn)
             if (node.disabled) Badge("已停用", StatusColors.Muted)
             if (node.failCount > 0) {
                 Text(
@@ -541,20 +548,20 @@ private fun NodeExpandCard(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 // 操作宫格（两行）
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ActionCell("▶", "测试", Modifier.weight(1f), isTesting, onTest)
-                    ActionCell("🏷", "标签", Modifier.weight(1f), editing, onStartEdit)
-                    ActionCell("🔑", if (node.keyless) "补Key" else "改Key", Modifier.weight(1f), editing, onStartEdit)
+                    ActionCell(Icons.Default.PlayArrow, "测试", Modifier.weight(1f), isTesting, onTest)
+                    ActionCell(Icons.Default.Label, "标签", Modifier.weight(1f), editing, onStartEdit)
+                    ActionCell(Icons.Default.Key, if (node.keyless) "补Key" else "改Key", Modifier.weight(1f), editing, onStartEdit)
                     ActionCell(
-                        if (node.disabled) "▶" else "⏸",
+                        if (node.disabled) Icons.Default.PlayArrow else Icons.Default.Pause,
                         if (node.disabled) "启用" else "停用",
                         Modifier.weight(1f), false, onToggleDisable,
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ActionCell("⧉", "复制URL", Modifier.weight(1f), false, onCopyUrl)
-                    ActionCell("⧉", "复制Key", Modifier.weight(1f), false, onCopyKey)
-                    ActionCell("✏️", "编辑", Modifier.weight(1f), editing, onStartEdit)
-                    ActionCell("🗑", "删除", Modifier.weight(1f), false, onDelete, danger = true)
+                    ActionCell(Icons.Default.ContentCopy, "复制URL", Modifier.weight(1f), false, onCopyUrl)
+                    ActionCell(Icons.Default.ContentCopy, "复制Key", Modifier.weight(1f), false, onCopyKey)
+                    ActionCell(Icons.Default.Edit, "编辑", Modifier.weight(1f), editing, onStartEdit)
+                    ActionCell(Icons.Default.Delete, "删除", Modifier.weight(1f), false, onDelete, danger = true)
                 }
 
                 // 行内编辑区
@@ -596,7 +603,7 @@ private fun NodeExpandCard(
 
 @Composable
 private fun ActionCell(
-    icon: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     modifier: Modifier = Modifier,
     active: Boolean = false,
@@ -622,7 +629,7 @@ private fun ActionCell(
             if (active && label == "测试") {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
             } else {
-                Text(icon, style = MaterialTheme.typography.bodyMedium)
+                Icon(icon, contentDescription = label, modifier = Modifier.size(16.dp))
             }
             Spacer(Modifier.height(2.dp))
             Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)

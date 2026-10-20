@@ -169,7 +169,7 @@ fun PermissionsScreen(
             // 1. 电池优化白名单
             PermissionCard(
                 title = "电池优化白名单",
-                status = if (batteryIgnored) "✅ 已忽略电池优化" else "⚠️ 未忽略，可能被系统杀后台",
+                status = if (batteryIgnored) "已忽略电池优化" else "未忽略，可能被系统杀后台",
                 statusWarn = !batteryIgnored,
                 actionText = if (batteryIgnored) "重新检查" else "去授权",
             ) {
