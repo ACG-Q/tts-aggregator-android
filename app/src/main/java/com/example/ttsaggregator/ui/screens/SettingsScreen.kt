@@ -51,6 +51,7 @@ fun SettingsScreen(
     onOpenPermissions: () -> Unit,
     onOpenAdmin: () -> Unit,
     onOpenAbout: () -> Unit,
+    onToast: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val version = remember { context.appVersion() }
@@ -84,6 +85,16 @@ fun SettingsScreen(
                 title = "权限管理",
                 subtitle = "电池优化白名单、后台运行等保活权限",
                 onClick = onOpenPermissions,
+            )
+            NavRow(
+                title = "设为系统 TTS",
+                subtitle = "选择 TTS Aggregator 作为默认朗读引擎",
+                onClick = {
+                    runCatching {
+                        // 先跳 TTS 设置页（用户选引擎），引擎列表里会出现 TTS Aggregator
+                        context.startActivity(Intent("android.speech.tts.ACTION_SETTINGS"))
+                    }.onFailure { onToast("无法打开 TTS 设置：${it.message}") }
+                },
             )
             NavRow(
                 title = "节点管理",

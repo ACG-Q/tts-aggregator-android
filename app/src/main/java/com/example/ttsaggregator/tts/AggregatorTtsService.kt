@@ -8,21 +8,26 @@ import android.speech.tts.TextToSpeechService
 import android.util.Log
 import com.example.ttsaggregator.appContainer
 import com.example.ttsaggregator.data.SynthPrefs
-import com.example.ttsaggregator.data.TtsNode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * 系统 TTS 引擎（URL TTS 实现）。
  *
  * 机制：onSynthesizeText 在 Service 工作线程调用。
  * 从聚合节点合成 MP3 → MediaCodec 解码为 PCM → 通过 SynthesisCallback 输出。
- * 音频由调用方播放，因此不需要 ExoPlayer / MediaPlayer / 前台通知。
+ * 合成/解码在独立协程里跑，不阻塞 TTS 工作线程；onStop 取消协程并中断
+ * OkHttp 调用，「停止朗读」即时生效。
  */
 class AggregatorTtsService : TextToSpeechService() {
 
     private val tag = "AggregatorTtsService"
 
-    @Volatile
-    private var stopped = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var synthesisJob: kotlinx.coroutines.Job? = null
 
     // ---------- 语言相关（云端任意语言，固定返回支持） ----------
 
@@ -38,7 +43,6 @@ class AggregatorTtsService : TextToSpeechService() {
 
     override fun onSynthesizeText(request: SynthesisRequest?, callback: SynthesisCallback?) {
         if (request == null || callback == null) return
-        stopped = false
 
         val text = request.charSequenceText?.toString().orEmpty()
         if (text.isBlank()) {
@@ -55,48 +59,58 @@ class AggregatorTtsService : TextToSpeechService() {
             pitch = ((request.pitch - 100) * 2).coerceIn(-100, 100),
         )
 
-        // 1) 通过节点池合成 MP3（自动/组/手选三种调度逻辑）
-        val mp3 = runCatching {
-            kotlinx.coroutines.runBlocking {
+        val job = scope.launch {
+            val mp3 = try {
                 appContainer.nodePool.synthesize(text, prefs)
+            } catch (e: Exception) {
+                Log.e(tag, "synthesis exception: ${e.message}")
+                return@launch
             }
-        }.getOrElse { Result.failure(it) }.getOrElse { e ->
-            Log.e(tag, "synthesis failed: ${e.message}")
-            callback.error(TextToSpeech.ERROR_SYNTHESIS)
-            return
-        }
+            val bytes = mp3.getOrNull()
+            if (bytes == null) {
+                Log.e(tag, "synthesis failed: ${mp3.exceptionOrNull()?.message}")
+                callback.error(TextToSpeech.ERROR_SYNTHESIS)
+                return@launch
+            }
 
-        // 2) 解码为 PCM（callback 只接受 PCM）
-        val pcm = try {
-            Mp3Decoder.decode(mp3)
-        } catch (e: Exception) {
-            Log.e(tag, "decode failed: ${e.message}")
-            callback.error(TextToSpeech.ERROR_SYNTHESIS)
-            return
-        }
+            val pcm = try {
+                Mp3Decoder.decode(bytes)
+            } catch (e: Exception) {
+                Log.e(tag, "decode failed: ${e.message}")
+                callback.error(TextToSpeech.ERROR_SYNTHESIS)
+                return@launch
+            }
 
-        // 3) 声明音频格式并分块输出
-        val startResult = callback.start(
-            pcm.sampleRate,
-            AudioFormat.ENCODING_PCM_16BIT,
-            pcm.channelCount,
-        )
-        if (startResult == TextToSpeech.ERROR) {
-            callback.error(TextToSpeech.ERROR_SYNTHESIS)
-            return
-        }
+            val startResult = callback.start(
+                pcm.sampleRate,
+                AudioFormat.ENCODING_PCM_16BIT,
+                pcm.channelCount,
+            )
+            if (startResult == TextToSpeech.ERROR) {
+                callback.error(TextToSpeech.ERROR_SYNTHESIS)
+                return@launch
+            }
 
-        val chunk = callback.maxBufferSize
-        var offset = 0
-        while (offset < pcm.pcm.size && !stopped) {
-            val len = minOf(chunk, pcm.pcm.size - offset)
-            if (callback.audioAvailable(pcm.pcm, offset, len) != TextToSpeech.SUCCESS) break
-            offset += len
+            val chunk = callback.maxBufferSize
+            var offset = 0
+            while (offset < pcm.pcm.size) {
+                val len = minOf(chunk, pcm.pcm.size - offset)
+                if (callback.audioAvailable(pcm.pcm, offset, len) != TextToSpeech.SUCCESS) break
+                offset += len
+            }
+            callback.done()
         }
-        if (!stopped) callback.done() else callback.error(TextToSpeech.ERROR_SYNTHESIS)
+        synthesisJob = job
     }
 
     override fun onStop() {
-        stopped = true
+        // 取消合成协程：OkHttp Call 随协程取消，HTTP 下载即时中断
+        synthesisJob?.cancel()
+        synthesisJob = null
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
     }
 }
