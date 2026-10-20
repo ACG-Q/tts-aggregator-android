@@ -3,6 +3,7 @@ package com.example.ttsaggregator.data
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.builtins.ListSerializer
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 音色仓库：全局一份音色列表（不按节点冗余）。
@@ -23,6 +24,9 @@ class VoiceRepository(
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading
 
+    /** 原子互斥：防止并发协程重复拉取（读-改-写非原子会漏判） */
+    private val loadLock = AtomicBoolean(false)
+
     /** 冷启动时从缓存恢复 */
     init {
         decodeCache(settings.readRaw(SettingsStore.KEY_VOICES_CACHE))?.let { _voices.value = it }
@@ -34,8 +38,9 @@ class VoiceRepository(
      * @param force  跳过内存缓存强制重新拉取
      */
     suspend fun load(source: TtsNode? = null, force: Boolean = false) {
-        if (_loading.value) return
         if (!force && _voices.value.isNotEmpty()) return
+        // 原子 CAS：只有一个调用方能进入，其余并发调用直接返回
+        if (!loadLock.compareAndSet(false, true)) return
         _loading.value = true
         try {
             val node = source ?: nodes().firstOrNull { it.health == TtsNode.Health.OK } ?: return
@@ -48,6 +53,7 @@ class VoiceRepository(
                 )
             }
         } finally {
+            loadLock.set(false)
             _loading.value = false
         }
     }
