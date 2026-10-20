@@ -63,21 +63,27 @@ class AdminViewModel(
     fun importNodes(raw: String, onDone: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val entries = raw.lines()
+                val lines = raw.lines()
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
-                    .mapNotNull { line ->
-                        val parts = line.split("|")
-                        val url = parts[0].trim().removeSuffix("/")
-                        if (!url.startsWith("http")) null
-                        else Triple(url, parts.getOrNull(1)?.trim().orEmpty(), null)
+                val entries = mutableListOf<Triple<String, String, String?>>()
+                var skipped = 0
+                for (line in lines) {
+                    val parts = line.split("|")
+                    val url = parts[0].trim().removeSuffix("/")
+                    if (!url.startsWith("http")) {
+                        skipped++
+                        continue
                     }
+                    entries.add(Triple(url, parts.getOrNull(1)?.trim().orEmpty(), null))
+                }
                 if (entries.isEmpty()) {
                     onDone("没有有效行（需以 http 开头）")
                     return@launch
                 }
                 repo.saveRawBatch(entries)
-                onDone("已保存 ${entries.size} 个节点（单事务写入）")
+                val skippedMsg = if (skipped > 0) "，跳过 $skipped 个无效行" else ""
+                onDone("已保存 ${entries.size} 个节点（单事务写入）$skippedMsg")
             } catch (e: Exception) {
                 onDone("导入失败: ${e.message}")
             }
