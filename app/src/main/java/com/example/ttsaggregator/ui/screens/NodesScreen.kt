@@ -185,7 +185,7 @@ private fun ModeAwareNodeRow(
                         Spacer(Modifier.width(6.dp))
                         val remain = (node.cooldownUntil - System.currentTimeMillis()) / 1000
                         Text(
-                            "🧊 ${remain / 60}m",
+                            "${remain / 60}m",
                             style = MaterialTheme.typography.labelSmall,
                             color = StatusColors.Warn,
                         )

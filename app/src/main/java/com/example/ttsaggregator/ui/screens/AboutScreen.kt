@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,7 +81,7 @@ fun AboutScreen(
 
             // 简介
             AppCard {
-                SectionHeader("📖 这是一款「TTS 中转站聚合」应用")
+                SectionHeader("这是一款「TTS 中转站聚合」应用")
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "基于开源项目 zuoban/tts 搭建的服务生态，将多个独立部署的 " +
@@ -115,7 +116,11 @@ fun AboutScreen(
                 },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🔗", style = MaterialTheme.typography.titleMedium)
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text(

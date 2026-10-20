@@ -98,7 +98,7 @@ fun VoiceScreen(
                     ) {
                         Column {
                             Text(
-                                "🎭 声音选择",
+                                "声音选择",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,

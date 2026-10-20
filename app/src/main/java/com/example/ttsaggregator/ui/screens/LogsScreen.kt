@@ -143,7 +143,7 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
                 maxLines = 1,
             )
             Text(
-                if (log.success) "✓ 成功" else "✗ 失败",
+                if (log.success) "成功" else "失败",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (log.success) MaterialTheme.colorScheme.primary
@@ -155,7 +155,7 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
         if (log.textPreview.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
             Text(
-                "💬 ${log.textPreview}${if (log.textLen > log.textPreview.length) "…" else ""}",
+                "文本 ${log.textPreview}${if (log.textLen > log.textPreview.length) "…" else ""}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -167,11 +167,11 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             MetaTag("耗时 ${formatLatency(log.latencyMs)}")
             MetaTag(
-                when (log.mode) {
-                    CallMode.AUTO -> "⚡自动"
-                    CallMode.GROUP -> "🔁组轮询"
-                    CallMode.MANUAL -> "🎯手选"
-                },
+                    when (log.mode) {
+                        CallMode.AUTO -> "自动"
+                        CallMode.GROUP -> "组轮询"
+                        CallMode.MANUAL -> "手选"
+                    },
             )
             MetaTag("第 ${log.attempt} 次尝试")
             MetaTag("文本 ${log.textLen} 字")
@@ -182,7 +182,7 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
         if (log.voice.isNotBlank() || log.rate != 0 || log.pitch != 0) {
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (log.voice.isNotBlank()) MetaTag("🎭 ${voiceDisplayName(voices, log.voice)}")
+                if (log.voice.isNotBlank()) MetaTag(voiceDisplayName(voices, log.voice))
                 if (log.rate != 0) MetaTag("语速 ${if (log.rate > 0) "+" else ""}${log.rate}")
                 if (log.pitch != 0) MetaTag("音调 ${if (log.pitch > 0) "+" else ""}${log.pitch}")
             }
