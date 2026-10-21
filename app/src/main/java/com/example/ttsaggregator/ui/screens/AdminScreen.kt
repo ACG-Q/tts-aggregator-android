@@ -167,16 +167,13 @@ fun AdminScreen(
                     },
                     onBatchDisable = {
                         if (selected.isEmpty()) { onToast("先勾选节点"); return@BatchBar }
-                        vm.setDisabled(selected, disabled = true)
+                        vm.setDisabled(selected, disabled = true, onDone = onToast)
                         selected = emptySet()
-                        onToast("已停用所选节点")
                     },
                     onBatchDelete = {
                         if (selected.isEmpty()) { onToast("先勾选节点"); return@BatchBar }
-                        val cnt = selected.size
-                        vm.delete(selected)
+                        vm.delete(selected, onDone = onToast)
                         selected = emptySet()
-                        onToast("已删除 $cnt 个节点")
                     },
                 )
             } else {
@@ -315,8 +312,7 @@ fun AdminScreen(
                         vm.testNode(node.id) { onToast(it) }
                     },
                     onToggleDisable = {
-                        vm.setDisabled(listOf(node.id), disabled = !node.disabled)
-                        onToast(if (!node.disabled) "已停用" else "已启用")
+                        vm.setDisabled(listOf(node.id), disabled = !node.disabled, onDone = onToast)
                     },
                     onCopyUrl = {
                         clipboard.setText(AnnotatedString(node.baseUrl))
@@ -330,8 +326,7 @@ fun AdminScreen(
                         }
                     },
                     onDelete = {
-                        vm.delete(listOf(node.id))
-                        onToast("已删除")
+                        vm.delete(listOf(node.id), onDone = onToast)
                     },
                 )
             }

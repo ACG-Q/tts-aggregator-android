@@ -13,6 +13,7 @@ import com.example.ttsaggregator.data.SynthPrefs
 import com.example.ttsaggregator.data.TtsNode
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -54,12 +55,19 @@ class HomeViewModel(
     fun speak(text: String, onResult: (Result<ByteArray>) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             _speaking.value = true
-            val s = synthSettings.value
-            val result = runCatching {
-                pool.synthesize(text, SynthPrefs(rate = s.rate, pitch = s.pitch))
-            }.getOrElse { Result.failure(it) }
-            _speaking.value = false
-            onResult(result)
+            try {
+                val s = synthSettings.value
+                val result = try {
+                    pool.synthesize(text, SynthPrefs(rate = s.rate, pitch = s.pitch))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+                onResult(result)
+            } finally {
+                _speaking.value = false
+            }
         }
     }
 

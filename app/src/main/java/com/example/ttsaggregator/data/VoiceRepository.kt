@@ -1,5 +1,6 @@
 package com.example.ttsaggregator.data
 
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.builtins.ListSerializer
@@ -43,15 +44,21 @@ class VoiceRepository(
         if (!loadLock.compareAndSet(false, true)) return
         _loading.value = true
         try {
-            val node = source ?: nodes().firstOrNull { it.health == TtsNode.Health.OK } ?: return
-            val list = api.fetchVoices(node.baseUrl)
-            if (!list.isNullOrEmpty()) {
-                _voices.value = list
-                settings.writeRaw(
-                    SettingsStore.KEY_VOICES_CACHE,
-                    AppJson.encodeToString(ListSerializer(Voice.serializer()), list),
-                )
+            // 指定来源优先；否则按健康节点顺序逐个尝试，避免首个节点异常导致整页无音色
+            val candidates = source?.let { listOf(it) }
+                ?: nodes().filter { it.health == TtsNode.Health.OK }
+            for (node in candidates) {
+                val list = api.fetchVoices(node)
+                if (!list.isNullOrEmpty()) {
+                    _voices.value = list
+                    settings.writeRaw(
+                        SettingsStore.KEY_VOICES_CACHE,
+                        AppJson.encodeToString(ListSerializer(Voice.serializer()), list),
+                    )
+                    return
+                }
             }
+            Log.w(TAG, "无法获取音色列表（已尝试 ${candidates.size} 个节点）")
         } finally {
             loadLock.set(false)
             _loading.value = false
@@ -62,4 +69,8 @@ class VoiceRepository(
         ?.takeIf { it.isNotBlank() }
         ?.let { runCatching { AppJson.decodeFromString(ListSerializer(Voice.serializer()), it) }.getOrNull() }
         ?.takeIf { it.isNotEmpty() }
+
+    companion object {
+        private const val TAG = "VoiceRepository"
+    }
 }

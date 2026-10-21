@@ -98,9 +98,7 @@ class NodePool(
         prefs: SynthPrefs,
     ): Result<ByteArray> {
         val now = System.currentTimeMillis()
-        val candidates = nodes
-            .filter { it.health != TtsNode.Health.FAIL && !it.disabled && !it.isCoolingDown(now) }
-            .sortedWith(compareBy({ it.health.ordinal }, { -it.lastChecked }))
+        val candidates = selectAutoCandidates(nodes, now)
         if (candidates.isEmpty()) {
             val cooling = nodes.count { it.isCoolingDown(now) }
             val msg = if (cooling > 0) "所有节点均不可用（$cooling 个冷却中）" else "没有可用节点"
@@ -127,14 +125,14 @@ class NodePool(
     ): Result<ByteArray> {
         val cfg = config
         val now = System.currentTimeMillis()
-        val group = nodes.filter { it.id in cfg.groupIds && !it.isCoolingDown(now) }
+        // 与自动模式一致：停用节点不参与调度
+        val group = selectGroupCandidates(nodes, cfg.groupIds, now)
         if (group.isEmpty()) {
-            return Result.failure(
-                IllegalStateException(
-                    if (cfg.groupIds.isEmpty()) "组内没有节点，请在 节点列表 勾选组成员"
-                    else "组内节点全部冷却/不可用",
-                ),
-            )
+            val msg = when {
+                cfg.groupIds.isEmpty() -> "组内没有节点，请在 节点列表 勾选组成员"
+                else -> "组内节点全部停用/冷却，请在 节点列表 调整"
+            }
+            return Result.failure(IllegalStateException(msg))
         }
         var prevFailed: String? = null
         for (i in group.indices) {
@@ -199,3 +197,20 @@ class NodePool(
         private const val SYNTH_RETRIES_PER_NODE = 1 // 池内每个节点只试一次（切换即重试）
     }
 }
+
+/**
+ * 自动模式候选：排除异常/停用/冷却节点，健康优先、最近测试在前。
+ * 抽成纯函数便于单测（无 Android 依赖）。
+ */
+internal fun selectAutoCandidates(nodes: List<TtsNode>, now: Long): List<TtsNode> = nodes
+    .filter { it.health != TtsNode.Health.FAIL && !it.disabled && !it.isCoolingDown(now) }
+    .sortedWith(compareBy({ it.health.ordinal }, { -it.lastChecked }))
+
+/**
+ * 组模式候选：只保留组内、未停用、未冷却的节点，保持原有顺序（轮询游标依赖它）。
+ */
+internal fun selectGroupCandidates(
+    nodes: List<TtsNode>,
+    groupIds: Collection<String>,
+    now: Long,
+): List<TtsNode> = nodes.filter { it.id in groupIds && !it.disabled && !it.isCoolingDown(now) }

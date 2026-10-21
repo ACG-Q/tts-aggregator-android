@@ -1,5 +1,6 @@
 package com.example.ttsaggregator.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ttsaggregator.data.NodeRepository
@@ -101,18 +102,41 @@ class AdminViewModel(
         }
     }
 
-    /** 批量启用/停用 */
-    fun setDisabled(ids: Collection<String>, disabled: Boolean) {
-        repo.setDisabled(ids, disabled)
+    /** 批量启用/停用（IO 线程写库，避免主线程磁盘 IO） */
+    fun setDisabled(ids: Collection<String>, disabled: Boolean, onDone: (String) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repo.setDisabled(ids, disabled)
+                onDone(if (disabled) "已停用 ${ids.size} 个节点" else "已启用 ${ids.size} 个节点")
+            } catch (e: Exception) {
+                Log.w(TAG, "setDisabled failed", e)
+                onDone("操作失败: ${e.message}")
+            }
+        }
     }
 
-    fun delete(ids: Collection<String>) {
-        // 删除手选节点时清理配置引用
-        settings.updatePoolConfig { cur ->
-            if (cur.manualId != null && cur.manualId in ids) cur.copy(manualId = null, manualFailCount = 0)
-            else cur
+    /** 批量删除；同时清理手选/组成员中引用到的已删节点 */
+    fun delete(ids: Collection<String>, onDone: (String) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                settings.updatePoolConfig { cur ->
+                    var next = cur
+                    if (cur.manualId != null && cur.manualId in ids) {
+                        next = next.copy(manualId = null, manualFailCount = 0)
+                    }
+                    val remaining = cur.groupIds.filterNot { it in ids }
+                    if (remaining.size != cur.groupIds.size) {
+                        next = next.copy(groupIds = remaining, groupCursor = 0)
+                    }
+                    next
+                }
+                repo.delete(ids)
+                onDone("已删除 ${ids.size} 个节点")
+            } catch (e: Exception) {
+                Log.w(TAG, "delete failed", e)
+                onDone("删除失败: ${e.message}")
+            }
         }
-        repo.delete(ids)
     }
 
     // ---------- 测试 ----------
@@ -176,5 +200,9 @@ class AdminViewModel(
             TtsNode.Health.UNKNOWN -> "未测试"
         }
         return "${n.baseUrl} — $health / ${if (n.keyless) "免Key" else "需Key"} / ${n.voiceCount} 音色"
+    }
+
+    companion object {
+        private const val TAG = "AdminViewModel"
     }
 }

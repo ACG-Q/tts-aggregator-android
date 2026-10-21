@@ -19,6 +19,7 @@ internal object Mp3Decoder {
     )
 
     fun decode(mp3: ByteArray): PcmResult {
+        require(mp3.isNotEmpty()) { "MP3 数据为空" }
         val codec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_AUDIO_MPEG)
         // 占位参数：真实采样率/声道由 MP3 头决定，输出格式以 codec.outputFormat 为准
         val dummy = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_MPEG, 24000, 2)
@@ -29,11 +30,16 @@ internal object Mp3Decoder {
         val info = MediaCodec.BufferInfo()
         var offset = 0
         var inputDone = false
+        var completed = false
         var sampleRate = 0
         var channelCount = 0
+        val deadline = System.currentTimeMillis() + MAX_DECODE_MS
 
         try {
             loop@ while (true) {
+                // 硬性超时：数据损坏/解码器不吐 EOS 时避免无限空转
+                if (System.currentTimeMillis() > deadline) break@loop
+
                 // 1) 喂输入
                 if (!inputDone) {
                     val inIndex = codec.dequeueInputBuffer(TIMEOUT_US)
@@ -62,8 +68,11 @@ internal object Mp3Decoder {
                         channelCount = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
                     }
                     MediaCodec.INFO_TRY_AGAIN_LATER -> {
-                        // 输入已尽但迟迟无 EOS → 兜底退出，防止死循环
-                        if (inputDone && out.size() > 0) break@loop
+                        // 输入已尽但迟迟无 EOS → 兜底退出，防止空转
+                        if (inputDone && out.size() > 0) {
+                            completed = true
+                            break@loop
+                        }
                     }
                     else -> {
                         if (sampleRate == 0) {
@@ -79,7 +88,10 @@ internal object Mp3Decoder {
                             out.write(pcm)
                         }
                         codec.releaseOutputBuffer(outIndex, false)
-                        if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break@loop
+                        if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            completed = true
+                            break@loop
+                        }
                     }
                 }
             }
@@ -88,9 +100,11 @@ internal object Mp3Decoder {
             runCatching { codec.release() }
         }
 
+        check(completed) { "MP3 解码未完成（超时或数据损坏）" }
         check(sampleRate > 0) { "MP3 解码失败：未获取输出格式" }
         return PcmResult(out.toByteArray(), sampleRate, channelCount)
     }
 
     private const val TIMEOUT_US = 10_000L
+    private const val MAX_DECODE_MS = 30_000L
 }
