@@ -114,16 +114,17 @@ class TtsApiClient {
     // ---------- 音色 ----------
 
     /**
-     * 拉取音色列表：新老端点回退。
+     * 拉取音色列表：新老端点回退，自动附带 node 的 API Key。
      * @return null = 两个端点都失败
      */
-    suspend fun fetchVoices(base: String): List<Voice>? {
-        val url = base.removeTrailingSlash()
+    suspend fun fetchVoices(node: TtsNode): List<Voice>? {
+        val base = node.baseUrl.removeTrailingSlash()
         // 新老版本端点回退：/api/v1/voices（新版） → /voices（老版，部分部署该端点挂起 → 短超时）
-        val urls = listOf("$url/api/v1/voices" to http, "$url/voices" to shortHttp)
+        val urls = listOf("$base/api/v1/voices" to http, "$base/voices" to shortHttp)
         for ((endpoint, client) in urls) {
+            val signed = endpoint.withApiKeyIfNeeded(node) ?: continue
             val list = retry {
-                client.newCall(Request.Builder().url(endpoint).get().build()).await().use {
+                client.newCall(Request.Builder().url(signed).get().build()).await().use {
                     if (it.isSuccessful) AppJson.decodeFromString(ListSerializer(Voice.serializer()), it.body!!.string())
                     else null
                 }
@@ -170,7 +171,8 @@ class TtsApiClient {
             }.toString().toRequestBody(jsonType)
             val url = endpoint.withApiKeyIfNeeded(node) ?: return null
             val resp = http.newCall(Request.Builder().url(url).post(json).build()).await()
-            resp.use { if (it.isSuccessful) it.body?.bytes() else null }
+            // 200 + 空 body 是失败：空音频会让解码器空转
+            resp.use { if (it.isSuccessful) it.body?.bytes()?.takeIf { b -> b.isNotEmpty() } else null }
         }.getOrNull()
 
     /**
@@ -191,7 +193,7 @@ class TtsApiClient {
                 }
                 ?.build() ?: return null
             val resp = http.newCall(Request.Builder().url(url).get().build()).await()
-            resp.use { if (it.isSuccessful) it.body?.bytes() else null }
+            resp.use { if (it.isSuccessful) it.body?.bytes()?.takeIf { b -> b.isNotEmpty() } else null }
         }.getOrNull()
 
     // ---------- 工具 ----------

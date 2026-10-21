@@ -1,10 +1,14 @@
 package com.example.ttsaggregator.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.ttsaggregator.data.NodeRepository
 import com.example.ttsaggregator.data.SettingsStore
 import com.example.ttsaggregator.data.TtsNode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * 节点列表页（调用逻辑子页）：按当前模式选择/配置调度成员。
@@ -33,9 +37,19 @@ class NodesViewModel(
         }
     }
 
-    /** 自动模式：切换节点是否参与调度 */
+    /** 自动模式：切换节点是否参与调度（IO 线程写库） */
     fun toggleDisabled(id: String) {
         val node = nodes.value.find { it.id == id } ?: return
-        repo.setDisabled(listOf(id), disabled = !node.disabled)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repo.setDisabled(listOf(id), disabled = !node.disabled)
+            } catch (e: Exception) {
+                Log.w(TAG, "toggleDisabled failed", e)
+            }
+        }
+    }
+
+    companion object {
+        private const val TAG = "NodesViewModel"
     }
 }
