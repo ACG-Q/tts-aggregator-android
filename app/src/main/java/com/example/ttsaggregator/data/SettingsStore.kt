@@ -56,6 +56,20 @@ class SettingsStore(context: Context) {
         synchronized(this) { saveSynthSettings(transform(_synthSettings.value)) }
     }
 
+    // ---------- 应用级设置 ----------
+
+    private val _appSettings = MutableStateFlow(read<AppSettings>(KEY_APP) ?: AppSettings())
+    val appSettings: StateFlow<AppSettings> = _appSettings
+
+    fun saveAppSettings(settings: AppSettings) {
+        prefs.edit().putString(KEY_APP, json.encodeToString(AppSettings.serializer(), settings)).apply()
+        _appSettings.value = settings
+    }
+
+    fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
+        synchronized(this) { saveAppSettings(transform(_appSettings.value)) }
+    }
+
     // ---------- 通用 JSON 读写（音色缓存等外部数据复用） ----------
 
     private inline fun <T> read(key: String, decode: (String) -> T): T? =
@@ -76,6 +90,7 @@ class SettingsStore(context: Context) {
     companion object {
         const val KEY_POOL = "pool_config"
         const val KEY_SETTINGS = "synth_settings"
+        const val KEY_APP = "app_settings"
         const val KEY_VOICES_CACHE = "voices_cache"
     }
 }

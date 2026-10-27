@@ -1,39 +1,44 @@
 package com.example.ttsaggregator
 
-import android.media.MediaPlayer
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.example.ttsaggregator.navigation.AppNav
+import com.example.ttsaggregator.playback.PlaybackController
 import com.example.ttsaggregator.ui.ProvideAppContainer
 import com.example.ttsaggregator.ui.theme.AppTheme
-import java.io.File
 
 /**
- * 宿主 Activity：只负责 Compose 容器 + 首页试听播放器。
- * 导航、业务状态全部在 Compose/ViewModel 层，Activity 不持有任何业务逻辑。
+ * 宿主 Activity：只负责 Compose 容器、全局播放器与 Toast。
+ * 导航、业务状态全部在 Compose/ViewModel 层。
  */
 class MainActivity : ComponentActivity() {
 
-    private var player: MediaPlayer? = null
-    private var playFile: File? = null
+    private lateinit var playback: PlaybackController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        playback = PlaybackController(applicationContext)
+        val container = (application as App).container
 
         setContent {
-            AppTheme {
-                ProvideAppContainer {
+            val appSettings by container.settings.appSettings.collectAsState()
+            val darkTheme = appSettings.theme.isDark(isSystemInDarkTheme())
+            AppTheme(darkTheme = darkTheme) {
+                ProvideAppContainer(appSettings) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background,
                     ) {
-                        AppNav(onPlay = ::play, onToast = ::toast)
+                        AppNav(player = playback, onToast = ::toast)
                     }
                 }
             }
@@ -41,39 +46,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        player?.release()
-        player = null
-        playFile?.delete()
-        playFile = null
+        playback.release()
         super.onDestroy()
-    }
-
-    /** 首页"立即朗读"的试听：MP3 落盘（后台线程）后用 MediaPlayer 异步播放 */
-    private fun play(bytes: ByteArray) {
-        Thread {
-            // 每次用独立文件，避免覆盖仍在播放的音频
-            val file = File(cacheDir, "tts_play_${System.currentTimeMillis()}.mp3")
-            runCatching { file.writeBytes(bytes) }
-                .onSuccess { runOnUiThread { startPlayer(file) } }
-                .onFailure { runOnUiThread { toast("播放失败: ${it.message}") } }
-        }.start()
-    }
-
-    private fun startPlayer(file: File) {
-        runCatching {
-            player?.release()
-            playFile?.delete()
-            player = MediaPlayer().apply {
-                setDataSource(file.absolutePath)
-                setOnPreparedListener { mp -> mp.start() }
-                setOnErrorListener { _, what, extra ->
-                    toast("播放失败（$what/$extra）")
-                    true
-                }
-                prepareAsync()
-            }
-            playFile = file
-        }.onFailure { toast("播放失败: ${it.message}") }
     }
 
     private fun toast(msg: String) {

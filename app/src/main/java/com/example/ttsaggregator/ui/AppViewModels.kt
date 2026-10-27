@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.ttsaggregator.AppContainer
 import com.example.ttsaggregator.appContainer
+import com.example.ttsaggregator.data.AppSettings
 
 /**
  * 依赖注入到 Compose：屏幕通过 appViewModel { ... } 拿到自己的 VM，
@@ -20,9 +21,18 @@ val LocalAppContainer = staticCompositionLocalOf<AppContainer> {
     error("AppContainer 未提供：请在 setContent 外层调用 ProvideAppContainer")
 }
 
+val LocalAppSettings = staticCompositionLocalOf { AppSettings() }
+
 @Composable
-fun ProvideAppContainer(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalAppContainer provides LocalContext.current.appContainer, content = content)
+fun ProvideAppContainer(
+    appSettings: AppSettings,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalAppContainer provides LocalContext.current.appContainer,
+        LocalAppSettings provides appSettings,
+        content = content,
+    )
 }
 
 /** 声明式获取本屏专属 VM：只传构造函数，工厂样板由这里统一处理 */
