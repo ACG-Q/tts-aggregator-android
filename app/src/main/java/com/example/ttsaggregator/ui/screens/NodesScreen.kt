@@ -1,8 +1,13 @@
 package com.example.ttsaggregator.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -39,6 +45,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -69,6 +76,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -78,14 +88,20 @@ import androidx.compose.ui.unit.sp
 import com.example.ttsaggregator.data.ApiVersion
 import com.example.ttsaggregator.data.CallMode
 import com.example.ttsaggregator.data.TtsNode
+import com.example.ttsaggregator.data.exportNodesJson
 import com.example.ttsaggregator.data.knownGroups
+import com.example.ttsaggregator.ui.LocalAppSettings
 import com.example.ttsaggregator.ui.appViewModel
 import com.example.ttsaggregator.ui.components.AddNodeSheet
+import com.example.ttsaggregator.ui.components.BatchAddSheet
+import com.example.ttsaggregator.ui.components.BatchBar
 import com.example.ttsaggregator.ui.components.EditNodeSheet
 import com.example.ttsaggregator.ui.components.EmptyState
+import com.example.ttsaggregator.ui.components.GroupSelectSheet
 import com.example.ttsaggregator.ui.components.HealthTile
 import com.example.ttsaggregator.ui.components.NodeBadge
 import com.example.ttsaggregator.ui.components.NodeDetailSheet
+import com.example.ttsaggregator.ui.components.NodeSelectBox
 import com.example.ttsaggregator.ui.theme.MonoTextStyle
 import com.example.ttsaggregator.ui.theme.StatusColors
 import com.example.ttsaggregator.ui.util.NodeState
@@ -97,6 +113,7 @@ import com.example.ttsaggregator.ui.util.statusLabel
 import com.example.ttsaggregator.ui.util.uiState
 import com.example.ttsaggregator.ui.util.validateNodeDraft
 import com.example.ttsaggregator.viewmodel.NodesViewModel
+import java.time.Instant
 import kotlinx.coroutines.delay
 
 /**
@@ -106,20 +123,57 @@ import kotlinx.coroutines.delay
 @Composable
 fun NodesScreen(
     onToast: (String) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val vm: NodesViewModel = appViewModel {
         NodesViewModel(it.nodeRepository, it.settings, it.logStore)
     }
+    val context = LocalContext.current
+    val appSettings = LocalAppSettings.current
+    val haptics = LocalHapticFeedback.current
     val nodes by vm.nodes.collectAsState()
     val groups = remember(nodes) { knownGroups(nodes) }
     val config by vm.poolConfig.collectAsState()
     val callLogs by vm.callLogs.collectAsState()
     val adding by vm.adding.collectAsState()
+    val importing by vm.importing.collectAsState()
     val busyNodeIds by vm.busyNodeIds.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
+    var showBatchAdd by remember { mutableStateOf(false) }
+    var showGroupSelect by remember { mutableStateOf(false) }
     var detailId by remember { mutableStateOf<String?>(null) }
     var editNodeId by remember { mutableStateOf<String?>(null) }
     var deleteNodeId by remember { mutableStateOf<String?>(null) }
+    var confirmBatchDelete by remember { mutableStateOf(false) }
+    var selectMode by remember { mutableStateOf(false) }
+    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingExport by remember { mutableStateOf<List<TtsNode>>(emptyList()) }
+
+    fun exitSelection() {
+        selectMode = false
+        selected = emptySet()
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        val export = pendingExport
+        pendingExport = emptyList()
+        if (uri != null && export.isNotEmpty()) {
+            runCatching {
+                val stream = context.contentResolver.openOutputStream(uri)
+                    ?: error("无法写入文件")
+                stream.bufferedWriter().use {
+                    it.write(exportNodesJson(export, appSettings, Instant.now().toString()))
+                }
+            }.onSuccess {
+                onToast("已导出 ${export.size} 个节点（不含密钥）")
+                exitSelection()
+            }.onFailure {
+                onToast("导出失败：${it.message ?: "未知错误"}")
+            }
+        }
+    }
 
     val latencyByUrl = remember(callLogs) {
         buildMap {
@@ -154,60 +208,163 @@ fun NodesScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-        NodesHeader(count = nodes.size, onAdd = { showAdd = true })
+    val allSelected = nodes.isNotEmpty() && selected.containsAll(nodes.map { it.id })
+    val isGroupMode = config.mode == CallMode.GROUP
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 112.dp),
-        ) {
-            item {
-                Hero(config.mode)
-            }
-            item {
-                SummaryRow(summary.available, summary.cooling, summary.disabled)
-            }
-            item {
-                ModeSegmented(
-                    mode = config.mode,
-                    onMode = vm::setMode,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 14.dp),
-                )
-            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            NodesHeader(
+                count = nodes.size,
+                selectMode = selectMode,
+                onSettings = onOpenSettings,
+                onSelect = {
+                    if (selectMode) exitSelection() else selectMode = true
+                },
+                onAdd = { showAdd = true },
+                onLongAdd = {
+                    if (appSettings.haptics) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                    showBatchAdd = true
+                },
+            )
 
-            if (nodes.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 2.dp,
+                    bottom = if (selectMode) 280.dp else 112.dp,
+                ),
+            ) {
                 item {
-                    EmptyState(
-                        "还没有节点。点右上角 + 添加第一个 TTS 接口。",
-                        Modifier.padding(bottom = 4.dp),
+                    Hero(config.mode)
+                }
+                item {
+                    SummaryRow(summary.available, summary.cooling, summary.disabled)
+                }
+                item {
+                    ModeSegmented(
+                        mode = config.mode,
+                        onMode = vm::setMode,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 14.dp),
                     )
                 }
-            } else {
-                items(nodes, key = { it.id }) { node ->
-                    val badge = node.badgeLabel(
-                        now,
-                        isPrimary = node.id == primaryId && !node.disabled,
-                        isGroupMember = node.id in config.groupIds,
-                    )
-                    NodeCard(
-                        node = node,
-                        isPrimary = node.id == primaryId && !node.disabled,
-                        badge = badge,
-                        latencyMs = latencyByUrl[node.baseUrl],
-                        now = now,
-                        onClick = { detailId = node.id },
-                    )
-                    Spacer(Modifier.height(10.dp))
+                if (isGroupMode) {
+                    item {
+                        GroupPoolPanel(
+                            nodes = nodes,
+                            groupIds = config.groupIds,
+                            onSelect = { showGroupSelect = true },
+                            onSelectAll = {
+                                vm.setGroupMembers(
+                                    nodes.filter { !it.disabled }.map { it.id }.toSet(),
+                                )
+                            },
+                        )
+                    }
                 }
-            }
 
-            item {
-                Spacer(Modifier.height(2.dp))
-                AddNodeButton(onClick = { showAdd = true })
-                Spacer(Modifier.height(12.dp))
-                HintRow()
-                Spacer(Modifier.height(24.dp))
+                if (nodes.isEmpty()) {
+                    item {
+                        EmptyState(
+                            "还没有节点。点右上角 + 添加第一个 TTS 接口。",
+                            Modifier.padding(bottom = 4.dp),
+                        )
+                    }
+                } else {
+                    items(nodes, key = { it.id }) { node ->
+                        val badge = node.badgeLabel(
+                            now,
+                            isPrimary = node.id == primaryId && !node.disabled,
+                            isGroupMember = node.id in config.groupIds,
+                        )
+                        fun toggleCheck() {
+                            selected = if (node.id in selected) selected - node.id
+                            else selected + node.id
+                        }
+                        NodeCard(
+                            node = node,
+                            isPrimary = node.id == primaryId && !node.disabled,
+                            badge = badge,
+                            latencyMs = latencyByUrl[node.baseUrl],
+                            now = now,
+                            selectMode = selectMode,
+                            checked = node.id in selected,
+                            showGroupToggle = isGroupMode && !selectMode,
+                            inGroup = node.id in config.groupIds,
+                            onClick = {
+                                if (selectMode) toggleCheck() else detailId = node.id
+                            },
+                            onToggleCheck = { toggleCheck() },
+                            onToggleGroup = { vm.toggleGroupMember(node.id) },
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
+
+                item {
+                    Spacer(Modifier.height(2.dp))
+                    AddNodeButton(
+                        onClick = { showAdd = true },
+                        onLongClick = {
+                            if (appSettings.haptics) {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                            showBatchAdd = true
+                        },
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    HintRow()
+                    Spacer(Modifier.height(24.dp))
+                }
             }
+        }
+
+        if (selectMode) {
+            BatchBar(
+                selectedCount = selected.size,
+                allSelected = allSelected,
+                showGroupAction = isGroupMode,
+                showExportAction = true,
+                onSelectAll = {
+                    selected = if (allSelected) emptySet() else nodes.map { it.id }.toSet()
+                },
+                onInvert = { selected = nodes.map { it.id }.toSet() - selected },
+                onExit = { exitSelection() },
+                onTest = {
+                    vm.testNodes(selected) { message ->
+                        onToast(message)
+                        exitSelection()
+                    }
+                },
+                onGroup = {
+                    vm.addToGroup(selected) { message ->
+                        onToast(message)
+                        exitSelection()
+                    }
+                },
+                onDisable = {
+                    val anyEnabled = nodes.any { it.id in selected && !it.disabled }
+                    vm.setDisabledBatch(selected, anyEnabled) { message ->
+                        onToast(message)
+                        exitSelection()
+                    }
+                },
+                onExport = {
+                    val export = nodes.filter { it.id in selected }
+                    if (export.isNotEmpty()) {
+                        pendingExport = export
+                        exportLauncher.launch("tts-nodes.json")
+                    }
+                },
+                onDelete = { confirmBatchDelete = true },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(start = 12.dp, end = 12.dp, bottom = 76.dp),
+            )
         }
     }
 
@@ -221,6 +378,58 @@ fun NodesScreen(
                     showAdd = false
                     onToast(message)
                 }
+            },
+        )
+    }
+
+    if (showBatchAdd) {
+        BatchAddSheet(
+            adding = importing,
+            groups = groups,
+            onDismiss = { if (!importing) showBatchAdd = false },
+            onImport = { raw, group, autoTest ->
+                vm.importNodes(raw, group, autoTest) { message ->
+                    showBatchAdd = false
+                    onToast(message)
+                }
+            },
+        )
+    }
+
+    if (showGroupSelect) {
+        GroupSelectSheet(
+            nodes = nodes,
+            initialSelected = config.groupIds.toSet(),
+            onDismiss = { showGroupSelect = false },
+            onSave = { members ->
+                vm.setGroupMembers(members)
+                showGroupSelect = false
+                onToast("轮询池已保存：${members.size} 个节点")
+            },
+        )
+    }
+
+    if (confirmBatchDelete) {
+        val count = selected.size
+        AlertDialog(
+            onDismissRequest = { confirmBatchDelete = false },
+            title = { Text("删除 $count 个节点？") },
+            text = { Text("将删除 $count 个节点，并从轮询池中移除。此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmBatchDelete = false
+                        vm.deleteNodes(selected) { message ->
+                            onToast(message)
+                            exitSelection()
+                        }
+                    },
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmBatchDelete = false }) { Text("取消") }
             },
         )
     }
@@ -295,8 +504,16 @@ fun NodesScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NodesHeader(count: Int, onAdd: () -> Unit) {
+private fun NodesHeader(
+    count: Int,
+    selectMode: Boolean,
+    onSettings: () -> Unit,
+    onSelect: () -> Unit,
+    onAdd: () -> Unit,
+    onLongAdd: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -337,9 +554,23 @@ private fun NodesHeader(count: Int, onAdd: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        HeaderIcon(
+            icon = Icons.Rounded.Settings,
+            description = "节点设置",
+            onClick = onSettings,
+        )
+        Spacer(Modifier.width(8.dp))
+        HeaderIcon(
+            icon = Icons.Rounded.Checklist,
+            description = "多选",
+            active = selectMode,
+            onClick = onSelect,
+        )
+        Spacer(Modifier.width(8.dp))
         Surface(
-            onClick = onAdd,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier
+                .size(40.dp)
+                .combinedClickable(onClick = onAdd, onLongClick = onLongAdd),
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -348,6 +579,33 @@ private fun NodesHeader(count: Int, onAdd: () -> Unit) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Add, contentDescription = "添加节点", modifier = Modifier.size(20.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun HeaderIcon(
+    icon: ImageVector,
+    description: String,
+    active: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (active) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface,
+        contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = description, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -481,13 +739,19 @@ private fun NodeCard(
     badge: String,
     latencyMs: Long?,
     now: Long,
+    selectMode: Boolean,
+    checked: Boolean,
+    showGroupToggle: Boolean,
+    inGroup: Boolean,
     onClick: () -> Unit,
+    onToggleCheck: () -> Unit,
+    onToggleGroup: () -> Unit,
 ) {
     val state = node.uiState(now)
     val meta = if (latencyMs != null && state == NodeState.AVAILABLE) {
-        "$latencyMs ms · ${node.secondaryLabel(now)}"
+        "$latencyMs ms · ${node.group}"
     } else {
-        "${node.statusLabel(now)} · ${node.secondaryLabel(now)}"
+        "${node.statusLabel(now)} · ${node.group}"
     }
 
     Surface(
@@ -507,7 +771,11 @@ private fun NodeCard(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            HealthTile(state)
+            if (selectMode) {
+                NodeSelectBox(checked = checked, onClick = onToggleCheck)
+            } else {
+                HealthTile(state)
+            }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -543,20 +811,49 @@ private fun NodeCard(
                 )
             }
 
-            Icon(
-                Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(start = 6.dp, top = 4.dp)
-                    .size(18.dp),
-            )
+            if (showGroupToggle) {
+                GroupTogglePill(inGroup = inGroup, onClick = onToggleGroup)
+            } else {
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .padding(start = 6.dp, top = 4.dp)
+                        .size(18.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AddNodeButton(onClick: () -> Unit) {
+private fun GroupTogglePill(inGroup: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (inGroup) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (inGroup) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (inGroup) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Text(
+            if (inGroup) "已加入" else "加入",
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AddNodeButton(onClick: () -> Unit, onLongClick: () -> Unit) {
     val outline = MaterialTheme.colorScheme.outline
     Row(
         modifier = Modifier
@@ -575,7 +872,7 @@ private fun AddNodeButton(onClick: () -> Unit) {
                 )
             }
             .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -590,6 +887,89 @@ private fun AddNodeButton(onClick: () -> Unit) {
             "添加节点",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun GroupPoolPanel(
+    nodes: List<TtsNode>,
+    groupIds: List<String>,
+    onSelect: () -> Unit,
+    onSelectAll: () -> Unit,
+) {
+    val selected = nodes.count { it.id in groupIds }
+    val grouped = nodes.filter { it.id in groupIds }.groupBy { it.group }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                "轮询池 · $selected 个节点",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                "按顺序轮询，单节点失败自动切换。",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PoolAction("选择节点", primary = true, onClick = onSelect)
+                PoolAction("全选可用", primary = false, onClick = onSelectAll)
+            }
+            if (grouped.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    grouped.forEach { (group, members) ->
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Text(
+                                "$group ${members.size}",
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PoolAction(label: String, primary: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(9.dp),
+        color = if (primary) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surface,
+        contentColor = if (primary) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (primary) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
