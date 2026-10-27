@@ -2,9 +2,6 @@ package com.example.ttsaggregator.ui.screens
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.PowerManager
-import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,38 +10,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.rounded.BatterySaver
+import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ttsaggregator.ui.components.AppCard
-import com.example.ttsaggregator.ui.components.NavRow
-import com.example.ttsaggregator.ui.components.SectionHeader
+import com.example.ttsaggregator.ui.components.PulseIconTile
+import com.example.ttsaggregator.ui.components.PulseSubHeader
+import com.example.ttsaggregator.ui.components.SettingRow
 
-// ---------------------------------------------------------------- 设置主页
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -57,19 +48,12 @@ fun SettingsScreen(
     val version = remember { context.appVersion() }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("设置") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+            PulseSubHeader(
+                title = "设置",
+                subtitle = "朗读、系统引擎与保活",
+                onBack = onBack,
             )
         },
     ) { padding ->
@@ -78,135 +62,101 @@ fun SettingsScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 4.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            NavRow(
-                title = "权限管理",
-                subtitle = "电池优化白名单、后台运行等保活权限",
-                onClick = onOpenPermissions,
-            )
-            NavRow(
-                title = "设为系统 TTS",
-                subtitle = "选择 TTS Aggregator 作为默认朗读引擎",
+            Surface(
                 onClick = {
                     runCatching {
-                        // 先跳 TTS 设置页（用户选引擎），引擎列表里会出现 TTS Aggregator
                         context.startActivity(Intent("android.speech.tts.ACTION_SETTINGS"))
                     }.onFailure { onToast("无法打开 TTS 设置：${it.message}") }
                 },
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant,
+                ),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PulseIconTile(
+                            icon = Icons.Rounded.Headphones,
+                            size = 46,
+                            background = MaterialTheme.colorScheme.primaryContainer,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "系统 TTS 引擎",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "把 TTS Aggregator 设为默认朗读引擎",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "当前已作为系统引擎注册。打开系统设置，在「文字转语音」中选择本应用即可供其他 App 调用。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "打开系统 TTS 设置 ›",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    )
+                }
+            }
+
+            SectionLabel("连接与调度")
+            SettingRow(
+                title = "权限管理",
+                subtitle = "电池优化白名单、后台运行等保活权限",
+                icon = Icons.Rounded.Lock,
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = onOpenPermissions,
             )
-            NavRow(
+            SettingRow(
                 title = "节点管理",
-                subtitle = "添加/搜索/分页/多选批量/批量测试",
+                subtitle = "添加、测试、搜索与批量维护 TTS 节点",
+                icon = Icons.Rounded.Dns,
                 onClick = onOpenAdmin,
             )
-            NavRow(
+
+            SectionLabel("应用")
+            SettingRow(
                 title = "关于",
-                subtitle = "应用简介 · 基于 zuoban/tts · 开源许可",
+                subtitle = "应用简介 · 开源许可 · 项目主页",
+                icon = Icons.Rounded.Info,
+                tint = MaterialTheme.colorScheme.secondary,
                 onClick = onOpenAbout,
             )
-            AppCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text("版本 $version", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-    }
-}
 
-// ---------------------------------------------------------------- 权限管理子页面
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PermissionsScreen(
-    onBack: () -> Unit,
-    onToast: (String) -> Unit,
-) {
-    val context = LocalContext.current
-    // 每次进入页面重新查询状态
-    var batteryIgnored by remember {
-        mutableStateOf(isIgnoringBatteryOptimizations(context))
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("权限管理") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                "系统 TTS 引擎需要常驻后台。若朗读偶尔中断或被杀，请授予以下权限（国产 ROM 尤其需要）。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // 1. 电池优化白名单
-            PermissionCard(
-                title = "电池优化白名单",
-                status = if (batteryIgnored) "已忽略电池优化" else "未忽略，可能被系统杀后台",
-                statusWarn = !batteryIgnored,
-                actionText = if (batteryIgnored) "重新检查" else "去授权",
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (!batteryIgnored) {
-                    requestIgnoreBatteryOptimizations(context, onToast)
-                }
-                batteryIgnored = isIgnoringBatteryOptimizations(context)
-            }
-
-            // 2. 后台运行 / 自启动（应用详情页，国产 ROM 各有入口）
-            PermissionCard(
-                title = "后台运行 / 自启动",
-                status = "各 ROM 入口不同，请在系统设置中允许本应用后台活动",
-                statusWarn = false,
-                actionText = "打开应用设置",
-            ) {
-                runCatching {
-                    context.startActivity(
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}"),
-                        ),
-                    )
-                }.onFailure {
-                    onToast("无法打开系统设置：${it.message}")
-                }
-            }
-
-            // 3. 说明
-            AppCard {
-                SectionHeader("说明")
-                Spacer(Modifier.height(4.dp))
+                Icon(
+                    Icons.Rounded.BatterySaver,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(
-                    "· 本引擎通过网络合成语音，需要后台网络权限（已默认授予）\n" +
-                        "· 电池白名单可避免朗读中服务被系统回收\n" +
-                        "· 保活权限只影响「系统 TTS」路径，App 内朗读不受影响",
-                    style = MaterialTheme.typography.bodySmall,
+                    "TTS Aggregator · 版本 $version",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -215,51 +165,17 @@ fun PermissionsScreen(
 }
 
 @Composable
-private fun PermissionCard(
-    title: String,
-    status: String,
-    statusWarn: Boolean,
-    actionText: String,
-    onAction: () -> Unit,
-) {
-    AppCard {
-        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            status,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (statusWarn) MaterialTheme.colorScheme.error
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onAction) {
-                Text(actionText, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    }
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 10.dp, bottom = 2.dp),
+    )
 }
-
-// ---------------------------------------------------------------- 工具
 
 internal fun Context.appVersion(): String = runCatching {
     @Suppress("DEPRECATION")
     packageManager.getPackageInfo(packageName, 0).versionName
 }.getOrDefault("1.0")
-
-private fun isIgnoringBatteryOptimizations(context: Context): Boolean = runCatching {
-    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-    pm.isIgnoringBatteryOptimizations(context.packageName)
-}.getOrDefault(false)
-
-private fun requestIgnoreBatteryOptimizations(context: Context, onToast: (String) -> Unit) {
-    runCatching {
-        context.startActivity(
-            Intent(
-                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                Uri.parse("package:${context.packageName}"),
-            ),
-        )
-    }.onFailure {
-        onToast("无法申请白名单：${it.message}")
-    }
-}
