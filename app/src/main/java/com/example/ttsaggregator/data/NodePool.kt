@@ -20,10 +20,18 @@ class NodePool(
     private val api: TtsApiClient,
 ) {
 
+    private val health = NodeHealthRegistry(
+        read = repo::get,
+        write = repo::upsert,
+        failThreshold = { settings.appSettings.value.failThreshold },
+        cooldownMs = { settings.appSettings.value.cooldownMinutes * 60_000L },
+    )
+
     val config get() = settings.poolConfig.value
 
     /** 入口：所有朗读（首页 HTTP 朗读、系统 TTS）都走这里 */
     suspend fun synthesize(text: String, prefs: SynthPrefs = SynthPrefs()): Result<ByteArray> {
+        repo.awaitReady()
         val nodes = repo.nodes.first()
         if (nodes.isEmpty()) {
             return Result.failure(IllegalStateException("还没有节点：请先到 设置 → 节点管理 添加"))
@@ -54,10 +62,8 @@ class NodePool(
         else Result.failure(IllegalStateException("合成失败：${node.baseUrl}（v1/兼容端点均不可用）"))
 
         r.onSuccess {
-            // 成功：清零失败计数与冷却
-            if (node.failCount > 0 || node.cooldownUntil > 0) {
-                repo.upsert(node.copy(failCount = 0, cooldownUntil = 0))
-            }
+            // 成功：清零失败计数与冷却（锁内读最新值）
+            health.onSuccess(node)
             logs.insert(
                 CallLog(
                     nodeUrl = node.baseUrl, mode = mode, textLen = text.length,
@@ -71,15 +77,13 @@ class NodePool(
         }
         r.onFailure {
             val err = it.message ?: it.javaClass.simpleName
-            val failCount = node.failCount + 1
-            val triggered = failCount >= COOLDOWN_AFTER && mode != CallMode.MANUAL
-            val cooldownUntil = if (triggered) System.currentTimeMillis() + COOLDOWN_MS else node.cooldownUntil
-            repo.upsert(node.copy(failCount = failCount, cooldownUntil = cooldownUntil))
+            val state = health.onFailure(node, mode)
             logs.insert(
                 CallLog(
                     nodeUrl = node.baseUrl, mode = mode, textLen = text.length,
                     attempt = attemptNo, success = false, latencyMs = ms,
-                    fromNode = fromNode, error = err, triggeredCooldown = triggered,
+                    fromNode = fromNode, error = err,
+                    triggeredCooldown = state.triggeredCooldown,
                     textPreview = text.take(TEXT_PREVIEW_LEN),
                     voice = prefs.voice.ifBlank { node.defaultVoice },
                     rate = prefs.rate, pitch = prefs.pitch,
@@ -191,8 +195,6 @@ class NodePool(
     companion object {
         private const val TAG = "TTS-Agg"
         private const val FAIL_LIMIT = 3
-        private const val COOLDOWN_AFTER = 3        // 连续失败 3 次进入冷却
-        private const val COOLDOWN_MS = 10 * 60 * 1000L
         private const val TEXT_PREVIEW_LEN = 80     // 日志记录的文本预览长度
         private const val SYNTH_RETRIES_PER_NODE = 1 // 池内每个节点只试一次（切换即重试）
     }
