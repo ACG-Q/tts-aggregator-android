@@ -29,6 +29,7 @@ data class TtsNode(
     @SerialName("failCount") val failCount: Int = 0,          // 连续合成失败次数
     @SerialName("cooldownUntil") val cooldownUntil: Long = 0,  // 冷却截止时间戳（0=无）
     @SerialName("disabled") val disabled: Boolean = false,     // 用户手动禁用（不参与自动调度）
+    @SerialName("group") val group: String = "默认",
     @SerialName("apiVersion") val apiVersion: ApiVersion = ApiVersion.UNKNOWN,
 ) {
     enum class Health { OK, FAIL, UNKNOWN }
@@ -163,3 +164,17 @@ data class CallLog(
 
 /** 日志过滤维度（UI 与存储共用，独立于存储实现） */
 enum class LogFilter { ALL, OK, FAIL, SWITCH }
+
+/**
+ * 用探测结果更新节点，但保留运行期状态与用户配置：
+ * id/label/apiKey/disabled/冷却/失败计数不能被一次探测重置。
+ */
+internal fun TtsNode.mergeProbe(previous: TtsNode): TtsNode = copy(
+    id = previous.id,
+    label = previous.label,
+    apiKey = apiKey ?: previous.apiKey,
+    disabled = previous.disabled,
+    cooldownUntil = previous.cooldownUntil,
+    failCount = previous.failCount,
+    group = previous.group,
+)

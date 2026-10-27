@@ -35,13 +35,15 @@ class NodeStore(context: Context) :
                 fail_count INTEGER NOT NULL DEFAULT 0,
                 cooldown_until INTEGER NOT NULL DEFAULT 0,
                 disabled INTEGER NOT NULL DEFAULT 0,
-                api_version INTEGER NOT NULL DEFAULT 2
+                api_version INTEGER NOT NULL DEFAULT 2,
+                group_name TEXT NOT NULL DEFAULT '默认'
             )
             """.trimIndent(),
         )
         db.execSQL("CREATE INDEX idx_nodes_health ON nodes(health)")
         db.execSQL("CREATE INDEX idx_nodes_checked ON nodes(last_checked)")
         db.execSQL("CREATE INDEX idx_nodes_label ON nodes(label)")
+        db.execSQL("CREATE INDEX idx_nodes_group ON nodes(group_name)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -54,6 +56,11 @@ class NodeStore(context: Context) :
         // v2 → v3：API 版本标签（0=V1 1=LEGACY 2=UNKNOWN）
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE nodes ADD COLUMN api_version INTEGER NOT NULL DEFAULT 2")
+        }
+        // v3 → v4：用户分组
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE nodes ADD COLUMN group_name TEXT NOT NULL DEFAULT '默认'")
+            db.execSQL("CREATE INDEX idx_nodes_group ON nodes(group_name)")
         }
     }
 
@@ -73,6 +80,7 @@ class NodeStore(context: Context) :
         put("cooldown_until", cooldownUntil)
         put("disabled", if (disabled) 1 else 0)
         put("api_version", apiVersion.ordinal)
+        put("group_name", group)
     }
 
     private fun Cursor.toNode(): TtsNode = TtsNode(
@@ -88,6 +96,7 @@ class NodeStore(context: Context) :
         failCount = getInt(getColumnIndexOrThrow("fail_count")),
         cooldownUntil = getLong(getColumnIndexOrThrow("cooldown_until")),
         disabled = getInt(getColumnIndexOrThrow("disabled")) != 0,
+        group = getString(getColumnIndexOrThrow("group_name")),
         apiVersion = ApiVersion.entries[
             getInt(getColumnIndexOrThrow("api_version")).coerceIn(0, ApiVersion.entries.size - 1)
         ],
@@ -148,13 +157,13 @@ class NodeStore(context: Context) :
         .rawQuery("SELECT * FROM nodes WHERE id = ?", arrayOf(id))
         .use { if (it.moveToFirst()) it.toNode() else null }
 
-    /** 搜索（URL/标签模糊匹配），带分页 */
+    /** 搜索（URL/标签/分组模糊匹配），带分页 */
     fun search(query: String, limit: Int, offset: Int): List<TtsNode> {
         val q = "%$query%"
         return readableDatabase.rawQuery(
-            "SELECT * FROM nodes WHERE base_url LIKE ? OR label LIKE ? " +
+            "SELECT * FROM nodes WHERE base_url LIKE ? OR label LIKE ? OR group_name LIKE ? " +
                 "ORDER BY health ASC, last_checked DESC LIMIT ? OFFSET ?",
-            arrayOf(q, q, limit.toString(), offset.toString()),
+            arrayOf(q, q, q, limit.toString(), offset.toString()),
         ).use { c ->
             val list = ArrayList<TtsNode>(c.count)
             while (c.moveToNext()) list.add(c.toNode())
@@ -165,8 +174,8 @@ class NodeStore(context: Context) :
     fun searchCount(query: String): Int {
         val q = "%$query%"
         return readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM nodes WHERE base_url LIKE ? OR label LIKE ?",
-            arrayOf(q, q),
+            "SELECT COUNT(*) FROM nodes WHERE base_url LIKE ? OR label LIKE ? OR group_name LIKE ?",
+            arrayOf(q, q, q),
         ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
@@ -191,6 +200,6 @@ class NodeStore(context: Context) :
 
     companion object {
         private const val DB_NAME = "tts_nodes.db"
-        private const val DB_VERSION = 3
+        private const val DB_VERSION = 4
     }
 }
