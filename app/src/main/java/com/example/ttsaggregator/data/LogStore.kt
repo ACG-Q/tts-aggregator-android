@@ -5,8 +5,13 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * 调用日志存储（SQLite，与节点库分离）。
@@ -14,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
  * - 环形保留最近 [KEEP] 条（插入时按 id 裁剪，日志不会无限膨胀）
  * - 以 [StateFlow] 暴露当前过滤结果，写入/清空/改过滤后自动刷新，UI 直接 collect
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class LogStore(context: Context) :
     SQLiteOpenHelper(context.applicationContext, DB_NAME, null, DB_VERSION) {
 
@@ -25,19 +31,32 @@ class LogStore(context: Context) :
     private val _logs = MutableStateFlow<List<CallLog>>(emptyList())
     val logs: StateFlow<List<CallLog>> = _logs
 
+    private val _count = MutableStateFlow(0)
+    val count: StateFlow<Int> = _count
+
+    // 单线程串行执行 DB 查询，保证连续切换过滤时结果不会被乱序覆盖
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
     init {
-        reload() // 冷启动加载最近日志，首页简版直接可用
+        scope.launch { reloadNow() } // 冷启动异步加载，避免主线程建库/查询
     }
 
     /** 切换过滤维度并刷新列表 */
     fun setFilter(f: LogFilter) {
         _filter.value = f
-        reload()
+        scope.launch { reloadNow() }
     }
 
-    /** 从库重载当前过滤的列表 */
+    /** 从库重载当前过滤的列表（异步，不阻塞调用线程） */
     fun reload() {
+        scope.launch { reloadNow() }
+    }
+
+    private fun reloadNow() {
         _logs.value = queryBy(_filter.value)
+        _count.value = readableDatabase.rawQuery("SELECT COUNT(*) FROM logs", null).use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
     }
 
     // ---------- 建表 / 升级 ----------
@@ -100,7 +119,7 @@ class LogStore(context: Context) :
         writableDatabase.execSQL(
             "DELETE FROM logs WHERE id NOT IN (SELECT id FROM logs ORDER BY id DESC LIMIT $KEEP)",
         )
-        reload()
+        reloadNow()
     }
 
     /** 最近日志（倒序），首页简版用 */
@@ -120,8 +139,10 @@ class LogStore(context: Context) :
     }
 
     fun clear() {
-        writableDatabase.delete("logs", null, null)
-        reload()
+        scope.launch {
+            writableDatabase.delete("logs", null, null)
+            reloadNow()
+        }
     }
 
     private fun query(sql: String, args: Array<String>): List<CallLog> =
