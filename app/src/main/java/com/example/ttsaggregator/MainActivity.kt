@@ -26,8 +26,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        playback = PlaybackController(applicationContext)
         val container = (application as App).container
+        playback = PlaybackController(applicationContext, container.settings)
+        playback.restoreIfNeeded()
 
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
@@ -43,6 +44,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStop() {
+        val backgroundPlay = (application as App).container.settings.appSettings.value.backgroundPlay
+        playback.onAppBackground(backgroundPlay)
+        super.onStop()
     }
 
     override fun onDestroy() {
