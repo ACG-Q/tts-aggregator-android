@@ -78,7 +78,6 @@ fun AppNav(
             )
             is Screen.Nodes -> NodesScreen(
                 onToast = onToast,
-                onOpenSettings = nav::goSettings,
             )
             is Screen.Voice -> VoiceScreen(
                 onBack = { nav.handleBack() },

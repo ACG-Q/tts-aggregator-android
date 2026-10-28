@@ -1,6 +1,7 @@
 package com.example.ttsaggregator.data
 
 import android.content.Context
+import com.example.ttsaggregator.playback.PlaybackSnapshot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
@@ -87,10 +88,34 @@ class SettingsStore(context: Context) {
 
     fun readRaw(key: String): String? = prefs.getString(key, null)
 
+    // ---------- 播放快照 ----------
+
+    fun savePlaybackSnapshot(snapshot: PlaybackSnapshot) {
+        writeRaw(KEY_PLAYBACK, encodePlaybackSnapshot(snapshot))
+    }
+
+    fun readPlaybackSnapshot(): PlaybackSnapshot? =
+        readRaw(KEY_PLAYBACK)?.let(::decodePlaybackSnapshot)
+
+    fun clearPlaybackSnapshot() {
+        prefs.edit().remove(KEY_PLAYBACK).apply()
+    }
+
     companion object {
         const val KEY_POOL = "pool_config"
         const val KEY_SETTINGS = "synth_settings"
         const val KEY_APP = "app_settings"
         const val KEY_VOICES_CACHE = "voices_cache"
+        const val KEY_PLAYBACK = "playback_snapshot"
+
+        private val snapshotJson = Json { ignoreUnknownKeys = true }
+
+        fun encodePlaybackSnapshot(snapshot: PlaybackSnapshot): String =
+            snapshotJson.encodeToString(PlaybackSnapshot.serializer(), snapshot)
+
+        fun decodePlaybackSnapshot(raw: String): PlaybackSnapshot? =
+            runCatching {
+                snapshotJson.decodeFromString(PlaybackSnapshot.serializer(), raw)
+            }.getOrNull()
     }
 }

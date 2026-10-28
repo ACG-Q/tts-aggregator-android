@@ -45,7 +45,6 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -123,7 +122,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun NodesScreen(
     onToast: (String) -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val vm: NodesViewModel = appViewModel {
         NodesViewModel(it.nodeRepository, it.settings, it.logStore)
@@ -216,7 +214,6 @@ fun NodesScreen(
             NodesHeader(
                 count = nodes.size,
                 selectMode = selectMode,
-                onSettings = onOpenSettings,
                 onSelect = {
                     if (selectMode) exitSelection() else selectMode = true
                 },
@@ -509,7 +506,6 @@ fun NodesScreen(
 private fun NodesHeader(
     count: Int,
     selectMode: Boolean,
-    onSettings: () -> Unit,
     onSelect: () -> Unit,
     onAdd: () -> Unit,
     onLongAdd: () -> Unit,
@@ -554,12 +550,6 @@ private fun NodesHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        HeaderIcon(
-            icon = Icons.Rounded.Settings,
-            description = "节点设置",
-            onClick = onSettings,
-        )
-        Spacer(Modifier.width(8.dp))
         HeaderIcon(
             icon = Icons.Rounded.Checklist,
             description = "多选",
