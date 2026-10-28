@@ -92,6 +92,7 @@ fun AppNav(
                 onOpenPermissions = nav::goPermissions,
                 onOpenAdmin = nav::goAdmin,
                 onOpenAbout = nav::goAbout,
+                onOpenVoice = nav::goVoice,
                 onToast = onToast,
             )
             is Screen.About -> AboutScreen(

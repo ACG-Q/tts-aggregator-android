@@ -1,0 +1,47 @@
+package com.example.ttsaggregator.viewmodel
+
+import com.example.ttsaggregator.data.AppSettingsOptions
+import com.example.ttsaggregator.data.CallMode
+import com.example.ttsaggregator.playback.ReadTuning
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class SettingsCyclesTest {
+
+    @Test
+    fun stepOption_moves_within_range() {
+        assertEquals(5, stepOption(1, AppSettingsOptions.COOLDOWN_MINUTES, 1))
+        assertEquals(60, stepOption(30, AppSettingsOptions.COOLDOWN_MINUTES, 1))
+    }
+
+    @Test
+    fun stepOption_clamps_at_both_ends() {
+        assertEquals(1, stepOption(1, AppSettingsOptions.COOLDOWN_MINUTES, -1))
+        assertEquals(60, stepOption(60, AppSettingsOptions.COOLDOWN_MINUTES, 1))
+    }
+
+    @Test
+    fun stepOption_unknown_value_starts_from_first() {
+        assertEquals(5, stepOption(7, AppSettingsOptions.COOLDOWN_MINUTES, 1))
+        assertEquals(1, stepOption(7, AppSettingsOptions.COOLDOWN_MINUTES, -1))
+    }
+
+    @Test
+    fun stepOption_empty_options_keeps_value() {
+        assertEquals(42, stepOption(42, emptyList<Int>(), 1))
+    }
+
+    @Test
+    fun rate_and_pitch_steps_match_tuning_lists() {
+        assertEquals(0, stepOption(-20, ReadTuning.RATES, 1))
+        assertEquals(50, stepOption(50, ReadTuning.RATES, 1))
+        assertEquals(-20, stepOption(0, ReadTuning.PITCHES, -1))
+    }
+
+    @Test
+    fun mode_cycles_auto_group_manual() {
+        assertEquals(CallMode.GROUP, CallMode.AUTO.nextMode())
+        assertEquals(CallMode.MANUAL, CallMode.GROUP.nextMode())
+        assertEquals(CallMode.AUTO, CallMode.MANUAL.nextMode())
+    }
+}
