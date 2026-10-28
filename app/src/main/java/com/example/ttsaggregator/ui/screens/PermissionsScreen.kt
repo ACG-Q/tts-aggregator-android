@@ -283,7 +283,7 @@ private fun PermissionKey.icon(): ImageVector = when (this) {
     PermissionKey.FILES -> Icons.Rounded.Folder
 }
 
-private fun readPermissionStates(context: Context): List<PermissionState> {
+internal fun readPermissionStates(context: Context): List<PermissionState> {
     val notify = if (Build.VERSION.SDK_INT >= 33) {
         context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
