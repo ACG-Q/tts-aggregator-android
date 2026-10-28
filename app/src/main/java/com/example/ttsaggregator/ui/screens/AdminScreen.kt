@@ -1,9 +1,14 @@
 package com.example.ttsaggregator.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,41 +21,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,32 +51,51 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.ttsaggregator.data.ApiVersion
+import androidx.compose.ui.unit.sp
+import com.example.ttsaggregator.data.CallMode
+import com.example.ttsaggregator.data.NodeFilter
+import com.example.ttsaggregator.data.NodeSort
 import com.example.ttsaggregator.data.TtsNode
+import com.example.ttsaggregator.data.exportNodesJson
+import com.example.ttsaggregator.data.filterAndSortNodes
+import com.example.ttsaggregator.data.knownGroups
+import com.example.ttsaggregator.ui.LocalAppSettings
 import com.example.ttsaggregator.ui.appViewModel
-import com.example.ttsaggregator.ui.components.ApiBadge
-import com.example.ttsaggregator.ui.components.AppCard
-import com.example.ttsaggregator.ui.components.Badge
+import com.example.ttsaggregator.ui.components.AddNodeSheet
+import com.example.ttsaggregator.ui.components.BatchAddSheet
+import com.example.ttsaggregator.ui.components.BatchBar
+import com.example.ttsaggregator.ui.components.EditNodeSheet
 import com.example.ttsaggregator.ui.components.EmptyState
-import com.example.ttsaggregator.ui.components.HealthBadge
-import com.example.ttsaggregator.ui.components.KeyBadge
+import com.example.ttsaggregator.ui.components.HealthTile
+import com.example.ttsaggregator.ui.components.NodeDetailSheet
+import com.example.ttsaggregator.ui.components.NodeSelectBox
+import com.example.ttsaggregator.ui.components.PulseSubHeader
 import com.example.ttsaggregator.ui.components.SelectChip
+import com.example.ttsaggregator.ui.theme.MonoTextStyle
 import com.example.ttsaggregator.ui.theme.StatusColors
+import com.example.ttsaggregator.ui.util.relativeTimeLabel
+import com.example.ttsaggregator.ui.util.statusLabel
+import com.example.ttsaggregator.ui.util.uiState
 import com.example.ttsaggregator.viewmodel.AdminViewModel
+import java.time.Instant
+import kotlinx.coroutines.delay
 
 /**
- * 节点管理 v2：
- * - 统计概览（点击即筛选）+ 状态筛选 chips
- * - 节点行点开 → 操作宫格（测试/标签/Key/停用/复制/编辑/删除）+ 行内编辑
- * - FAB 添加（底部弹窗，保存即测开关）
- * - 多选 → 底部浮动批量栏（全选/测试/禁用/删除）
+ * 节点管理页：统计筛选、搜索排序、卡片详情、批量维护与导入导出。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AdminScreen(
     onBack: () -> Unit,
@@ -92,736 +104,786 @@ fun AdminScreen(
     val vm: AdminViewModel = appViewModel { AdminViewModel(it.nodeRepository, it.settings) }
     val nodes by vm.nodes.collectAsState()
     val testingIds by vm.testingIds.collectAsState()
-    val batchTesting by vm.batchTesting.collectAsState()
     val testProgress by vm.testProgress.collectAsState()
-    val clipboard = LocalClipboardManager.current
+    val adding by vm.adding.collectAsState()
+    val importing by vm.importing.collectAsState()
+    val config by vm.poolConfig.collectAsState()
+    val context = LocalContext.current
+    val appSettings = LocalAppSettings.current
+    val haptics = LocalHapticFeedback.current
 
-    var filter by remember { mutableStateOf(NodeFilter.ALL) }
-    var sortMode by remember { mutableStateOf(SortMode.DEFAULT) }
-    var openId by remember { mutableStateOf<String?>(null) }
-    var editId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
+    var filter by remember { mutableStateOf(NodeFilter.ALL) }
+    var sort by remember { mutableStateOf(NodeSort.DEFAULT) }
     var selectMode by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf(setOf<String>()) }
+    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var detailId by remember { mutableStateOf<String?>(null) }
+    var editNodeId by remember { mutableStateOf<String?>(null) }
+    var deleteNodeId by remember { mutableStateOf<String?>(null) }
+    var confirmBatchDelete by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
-    var showImport by remember { mutableStateOf(false) }
-    var autoTest by remember { mutableStateOf(true) }
+    var showBatchAdd by remember { mutableStateOf(false) }
+    var pendingExport by remember { mutableStateOf<List<TtsNode>>(emptyList()) }
 
-    val filtered = remember(nodes, filter, query, sortMode) {
-        var list = nodes.filter { filter.matches(it) }
-        if (query.isNotBlank()) {
-            list = list.filter {
-                it.baseUrl.contains(query, true) || it.label.contains(query, true)
+    fun exitSelection() {
+        selectMode = false
+        selected = emptySet()
+    }
+
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
+
+    val groups = remember(nodes) { knownGroups(nodes) }
+    val filtered = remember(nodes, query, filter, sort, now) {
+        filterAndSortNodes(nodes, query, filter, sort, now)
+    }
+    val filteredIds = remember(filtered) { filtered.map { it.id }.toSet() }
+    val allSelected = filteredIds.isNotEmpty() && selected.containsAll(filteredIds)
+
+    val primaryId = remember(nodes, config, now) {
+        when (config.mode) {
+            CallMode.AUTO -> nodes
+                .filter { !it.disabled && it.health != TtsNode.Health.FAIL && !it.isCoolingDown(now) }
+                .sortedWith(compareBy({ it.health.ordinal }, { -it.lastChecked }))
+                .firstOrNull()?.id
+            CallMode.GROUP -> nodes
+                .filter { it.id in config.groupIds && !it.disabled && !it.isCoolingDown(now) }
+                .let { group ->
+                    if (group.isEmpty()) null
+                    else group[config.groupCursor % group.size].id
+                }
+            CallMode.MANUAL -> config.manualId
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        val export = pendingExport
+        pendingExport = emptyList()
+        if (uri != null && export.isNotEmpty()) {
+            runCatching {
+                val stream = context.contentResolver.openOutputStream(uri)
+                    ?: error("无法写入文件")
+                stream.bufferedWriter().use {
+                    it.write(exportNodesJson(export, appSettings, Instant.now().toString()))
+                }
+            }.onSuccess {
+                onToast("已导出 ${export.size} 个节点（不含密钥）")
+                exitSelection()
+            }.onFailure {
+                onToast("导出失败：${it.message ?: "未知错误"}")
             }
         }
-        when (sortMode) {
-            SortMode.DEFAULT -> list.sortedWith(compareBy({ it.health.ordinal }, { -it.lastChecked }))
-            SortMode.NAME -> list.sortedBy { it.label.ifBlank { it.baseUrl } }
-            SortMode.LAST -> list.sortedByDescending { it.lastChecked }
-            SortMode.FAIL -> list.sortedByDescending { it.failCount }
+    }
+
+    fun longPressHint() {
+        if (appSettings.haptics) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("节点管理（${nodes.size}）") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showAdd = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "添加")
-                    }
-                    IconButton(onClick = { showImport = true }) {
-                        Icon(Icons.Default.List, contentDescription = "批量导入")
-                    }
-                    IconButton(onClick = {
-                        selectMode = !selectMode
-                        selected = emptySet()
-                    }) {
-                        Icon(Icons.Default.Checklist, contentDescription = "多选")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        },
-        floatingActionButton = {
-            if (selectMode) {
-                BatchBar(
-                    count = selected.size,
-                    onSelectAll = {
-                        selected = if (selected.size == filtered.size) emptySet()
-                        else filtered.map { it.id }.toSet()
-                    },
-                    onBatchTest = {
-                        if (selected.isEmpty()) { onToast("先勾选节点"); return@BatchBar }
-                        vm.testNodes(selected) { onToast(it) }
-                    },
-                    onBatchDisable = {
-                        if (selected.isEmpty()) { onToast("先勾选节点"); return@BatchBar }
-                        vm.setDisabled(selected, disabled = true, onDone = onToast)
-                        selected = emptySet()
-                    },
-                    onBatchDelete = {
-                        if (selected.isEmpty()) { onToast("先勾选节点"); return@BatchBar }
-                        vm.delete(selected, onDone = onToast)
-                        selected = emptySet()
-                    },
+            PulseSubHeader(
+                title = "节点管理",
+                subtitle = "测试、分组与批量维护",
+                onBack = onBack,
+            ) {
+                HeaderAction(
+                    icon = Icons.Rounded.Checklist,
+                    description = "多选",
+                    active = selectMode,
+                    onClick = { if (selectMode) exitSelection() else selectMode = true },
                 )
-            } else {
-                FloatingActionButton(
-                    onClick = { showAdd = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .combinedClickable(
+                            onClick = { showAdd = true },
+                            onLongClick = {
+                                longPressHint()
+                                showBatchAdd = true
+                            },
+                        ),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "添加节点")
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = "添加节点",
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         },
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .fillMaxSize()
+                .padding(padding),
         ) {
-            // ---- 统计概览（点击即筛选） ----
-            item {
-                StatsRow(
-                    total = nodes.size,
-                    ok = nodes.count { it.health == TtsNode.Health.OK && !it.disabled },
-                    bad = nodes.count { it.health == TtsNode.Health.FAIL },
-                    needKey = nodes.count { !it.keyless },
-                    coolDis = nodes.count { it.isCoolingDown() || it.disabled },
-                    active = filter,
-                    onFilter = { filter = it },
-                )
-            }
-
-            // ---- 状态筛选 chips ----
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    NodeFilter.entries.forEach { f ->
-                        SelectChip(f.label, selected = filter == f, onClick = { filter = f })
-                    }
-                }
-            }
-
-            // ---- 搜索 + 排序 ----
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = { Text("搜索 URL / 标签", style = MaterialTheme.typography.labelMedium) },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            sortMode = when (sortMode) {
-                                SortMode.DEFAULT -> SortMode.NAME
-                                SortMode.NAME -> SortMode.LAST
-                                SortMode.LAST -> SortMode.FAIL
-                                SortMode.FAIL -> SortMode.DEFAULT
-                            }
-                        },
-                        modifier = Modifier.padding(top = 8.dp),
-                    ) {
-                        Text(sortMode.label, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-
-            // ---- 测试进度 ----
-            if (batchTesting) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 6.dp,
+                    bottom = if (selectMode) 280.dp else 108.dp,
+                ),
+            ) {
                 item {
-                    val p = testProgress
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                    StatsGrid(
+                        nodes = nodes,
+                        filter = filter,
+                        now = now,
+                        onFilter = { filter = it },
+                    )
+                }
+                item {
+                    ToolRow(
+                        query = query,
+                        onQuery = { query = it },
+                        sort = sort,
+                        onSort = { sort = sort.next() },
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-                            Text(
-                                p?.let { "批量测试中 ${it.first}/${it.second}" } ?: "批量测试中…",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        NodeFilter.entries.forEach { option ->
+                            SelectChip(
+                                label = option.label,
+                                selected = filter == option,
+                                onClick = { filter = option },
                             )
-                            if (p != null && p.second > 0) {
-                                Spacer(Modifier.height(6.dp))
-                                LinearProgressIndicator(
-                                    progress = { p.first.toFloat() / p.second },
-                                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                        }
+                    }
+                }
+                item {
+                    HintBar(Modifier.padding(top = 12.dp, bottom = 12.dp))
+                }
+
+                val progress = testProgress
+                if (progress != null) {
+                    item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text(
+                                    "正在测试 ${progress.first}/${progress.second}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 )
+                                if (progress.second > 0) {
+                                    Spacer(Modifier.height(6.dp))
+                                    LinearProgressIndicator(
+                                        progress = { progress.first.toFloat() / progress.second },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(4.dp),
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // ---- 空态 ----
-            if (filtered.isEmpty()) {
-                item {
-                    EmptyState(
-                        if (nodes.isEmpty()) "暂无节点，点右下角 ＋ 添加" else "没有匹配的节点",
+                if (filtered.isEmpty()) {
+                    item {
+                        EmptyState(
+                            if (nodes.isEmpty()) "还没有节点。长按右上角 ＋ 批量导入，或点击 ＋ 添加。"
+                            else "没有匹配的节点，试试调整搜索或筛选。",
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+
+                items(filtered, key = { it.id }) { node ->
+                    NodeAdminCard(
+                        node = node,
+                        now = now,
+                        checked = node.id in selected,
+                        testing = node.id in testingIds,
+                        onToggleCheck = {
+                            val next = if (node.id in selected) selected - node.id
+                            else selected + node.id
+                            selected = next
+                            selectMode = next.isNotEmpty()
+                        },
+                        onOpen = { detailId = node.id },
                     )
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                item {
+                    AddNodeButton(
+                        onClick = { showAdd = true },
+                        onLongClick = {
+                            longPressHint()
+                            showBatchAdd = true
+                        },
+                    )
+                    Spacer(Modifier.height(24.dp))
                 }
             }
 
-            // ---- 节点列表（可展开） ----
-            itemsIndexed(filtered, key = { _, it -> it.id }) { idx, node ->
-                NodeExpandCard(
-                    node = node,
-                    index = idx + 1,
-                    isTesting = node.id in testingIds,
-                    isOpen = openId == node.id,
-                    selectMode = selectMode,
-                    checked = node.id in selected,
-                    editing = editId == node.id,
-                    onToggleOpen = {
-                        openId = if (openId == node.id) null else node.id
-                        editId = null
+            if (selectMode) {
+                BatchBar(
+                    selectedCount = selected.size,
+                    allSelected = allSelected,
+                    showGroupAction = true,
+                    showExportAction = true,
+                    onSelectAll = {
+                        selected = if (allSelected) emptySet() else filteredIds
                     },
-                    onToggleCheck = {
-                        selected = if (node.id in selected) selected - node.id else selected + node.id
-                    },
-                    onStartEdit = { editId = node.id },
-                    onCancelEdit = { editId = null },
-                    onSaveEdit = { label, apiKey ->
-                        vm.updateNodeMeta(node.id, label, apiKey) { onToast(it) }
-                        editId = null
-                    },
+                    onInvert = { selected = filteredIds - selected },
+                    onExit = { exitSelection() },
                     onTest = {
-                        if (batchTesting) return@NodeExpandCard
-                        vm.testNode(node.id) { onToast(it) }
+                        if (selected.isEmpty()) {
+                            onToast("先勾选节点")
+                        } else {
+                            vm.testNodes(selected) { message ->
+                                onToast(message)
+                                exitSelection()
+                            }
+                        }
                     },
-                    onToggleDisable = {
-                        vm.setDisabled(listOf(node.id), disabled = !node.disabled, onDone = onToast)
+                    onGroup = {
+                        vm.addToGroup(selected) { message ->
+                            onToast(message)
+                            exitSelection()
+                        }
                     },
-                    onCopyUrl = {
-                        clipboard.setText(AnnotatedString(node.baseUrl))
-                        onToast("URL 已复制")
+                    onDisable = {
+                        if (selected.isEmpty()) {
+                            onToast("先勾选节点")
+                        } else {
+                            val anyEnabled = nodes.any { it.id in selected && !it.disabled }
+                            vm.setDisabled(selected, anyEnabled) { message ->
+                                onToast(message)
+                                exitSelection()
+                            }
+                        }
                     },
-                    onCopyKey = {
-                        if (node.apiKey.isNullOrBlank()) onToast("该节点没有 Key")
-                        else {
-                            clipboard.setText(AnnotatedString(node.apiKey))
-                            onToast("Key 已复制")
+                    onExport = {
+                        val export = nodes.filter { it.id in selected }
+                        if (export.isNotEmpty()) {
+                            pendingExport = export
+                            exportLauncher.launch("tts-nodes.json")
                         }
                     },
                     onDelete = {
-                        vm.delete(listOf(node.id), onDone = onToast)
+                        if (selected.isEmpty()) onToast("先勾选节点") else confirmBatchDelete = true
                     },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 18.dp),
                 )
             }
         }
     }
 
-    // ---- 添加底部弹窗（保存即测） ----
     if (showAdd) {
-        ModalBottomSheet(onDismissRequest = { showAdd = false }) {
-            AddSheetContent(
-                autoTest = autoTest,
-                onAutoTestChange = { autoTest = it },
-                onSave = { url, label, key ->
-                    vm.addNode(url, label, key, autoTest) { msg ->
-                        showAdd = false
-                        onToast(msg)
-                    }
-                },
-            )
-        }
+        AddNodeSheet(
+            adding = adding,
+            groups = groups,
+            onDismiss = { if (!adding) showAdd = false },
+            onSave = { url, label, apiKey, group ->
+                vm.addNode(url, label, apiKey, group) { message ->
+                    showAdd = false
+                    onToast(message)
+                }
+            },
+        )
     }
 
-    // ---- 批量导入 ----
-    if (showImport) {
-        ImportDialog(
-            onDismiss = { showImport = false },
-            onConfirm = { raw ->
-                showImport = false
-                vm.importNodes(raw) { onToast(it) }
+    if (showBatchAdd) {
+        BatchAddSheet(
+            adding = importing,
+            groups = groups,
+            onDismiss = { if (!importing) showBatchAdd = false },
+            onImport = { raw, group, autoTest ->
+                vm.importNodes(raw, group, autoTest) { message ->
+                    showBatchAdd = false
+                    onToast(message)
+                }
+            },
+        )
+    }
+
+    val detailNode = nodes.firstOrNull { it.id == detailId }
+    if (detailNode != null) {
+        val isDetailPrimary = detailNode.id == primaryId && !detailNode.disabled
+        NodeDetailSheet(
+            node = detailNode,
+            mode = config.mode,
+            isPrimary = isDetailPrimary,
+            inGroup = detailNode.id in config.groupIds,
+            isManual = detailNode.id == config.manualId,
+            latencyMs = null,
+            now = now,
+            testing = detailNode.id in testingIds,
+            onDismiss = { detailId = null },
+            onTest = { vm.testNode(detailNode.id, onToast) },
+            onToggleDisabled = {
+                vm.setDisabled(listOf(detailNode.id), !detailNode.disabled, onDone = onToast)
+            },
+            onToggleGroup = { vm.toggleGroupMember(detailNode.id) },
+            onSetManual = {
+                vm.setManual(detailNode.id)
+                onToast("已设为当前节点")
+            },
+            onEdit = {
+                detailId = null
+                editNodeId = detailNode.id
+            },
+            onDelete = {
+                detailId = null
+                deleteNodeId = detailNode.id
+            },
+        )
+    }
+
+    val editNode = nodes.firstOrNull { it.id == editNodeId }
+    if (editNode != null) {
+        EditNodeSheet(
+            node = editNode,
+            groups = groups,
+            onDismiss = { editNodeId = null },
+            onSave = { label, apiKey, group ->
+                vm.updateNodeMeta(editNode.id, label, apiKey, group) { message ->
+                    editNodeId = null
+                    onToast(message)
+                }
+            },
+        )
+    }
+
+    val deleteNode = nodes.firstOrNull { it.id == deleteNodeId }
+    if (deleteNode != null) {
+        AlertDialog(
+            onDismissRequest = { deleteNodeId = null },
+            title = { Text("删除节点？") },
+            text = { Text("将删除「${deleteNode.label.ifBlank { deleteNode.baseUrl }}」，并从轮询池中移除。此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.delete(listOf(deleteNode.id)) { message ->
+                            deleteNodeId = null
+                            onToast(message)
+                        }
+                    },
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteNodeId = null }) { Text("取消") }
+            },
+        )
+    }
+
+    if (confirmBatchDelete) {
+        val count = selected.size
+        AlertDialog(
+            onDismissRequest = { confirmBatchDelete = false },
+            title = { Text("删除 $count 个节点？") },
+            text = { Text("将删除 $count 个节点，并从轮询池中移除。此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmBatchDelete = false
+                        vm.delete(selected) { message ->
+                            onToast(message)
+                            exitSelection()
+                        }
+                    },
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmBatchDelete = false }) { Text("取消") }
             },
         )
     }
 }
 
-// ================================================================ 统计概览
-
 @Composable
-private fun StatsRow(
-    total: Int,
-    ok: Int,
-    bad: Int,
-    needKey: Int,
-    coolDis: Int,
-    active: NodeFilter,
-    onFilter: (NodeFilter) -> Unit,
+private fun HeaderAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    active: Boolean,
+    onClick: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        StatCard("全部", total, null, active == NodeFilter.ALL, Modifier.weight(1f)) { onFilter(NodeFilter.ALL) }
-        StatCard("健康", ok, StatusColors.Ok, active == NodeFilter.OK, Modifier.weight(1f)) { onFilter(NodeFilter.OK) }
-        StatCard("异常", bad, StatusColors.Error, active == NodeFilter.BAD, Modifier.weight(1f)) { onFilter(NodeFilter.BAD) }
-        StatCard("需Key", needKey, StatusColors.Warn, active == NodeFilter.NEEDKEY, Modifier.weight(1f)) { onFilter(NodeFilter.NEEDKEY) }
-        StatCard("停用", coolDis, StatusColors.Muted, active == NodeFilter.COOL_DIS, Modifier.weight(1f)) { onFilter(NodeFilter.COOL_DIS) }
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (active) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface,
+        contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = description, modifier = Modifier.size(20.dp))
+        }
     }
 }
 
 @Composable
-private fun StatCard(
+private fun StatsGrid(
+    nodes: List<TtsNode>,
+    filter: NodeFilter,
+    now: Long,
+    onFilter: (NodeFilter) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StatCell(
+            label = "全部",
+            count = nodes.size,
+            accent = MaterialTheme.colorScheme.primary,
+            active = filter == NodeFilter.ALL,
+            onClick = { onFilter(NodeFilter.ALL) },
+            modifier = Modifier.weight(1f),
+        )
+        StatCell(
+            label = "健康",
+            count = nodes.count { NodeFilter.OK.matches(it, now) },
+            accent = StatusColors.Ok,
+            active = filter == NodeFilter.OK,
+            onClick = { onFilter(NodeFilter.OK) },
+            modifier = Modifier.weight(1f),
+        )
+        StatCell(
+            label = "异常",
+            count = nodes.count { NodeFilter.BAD.matches(it, now) },
+            accent = StatusColors.Error,
+            active = filter == NodeFilter.BAD,
+            onClick = { onFilter(NodeFilter.BAD) },
+            modifier = Modifier.weight(1f),
+        )
+        StatCell(
+            label = "停用",
+            count = nodes.count { NodeFilter.DISABLED.matches(it, now) },
+            accent = StatusColors.Muted,
+            active = filter == NodeFilter.DISABLED,
+            onClick = { onFilter(NodeFilter.DISABLED) },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun StatCell(
     label: String,
     count: Int,
-    color: Color?,
+    accent: Color,
     active: Boolean,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.small,
-        color = if (active) MaterialTheme.colorScheme.primaryContainer
+        onClick = onClick,
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
         else MaterialTheme.colorScheme.surface,
         border = BorderStroke(
-            1.dp,
-            if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+            if (active) 1.5.dp else 1.dp,
+            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant,
         ),
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
             Text(
                 "$count",
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.titleMedium,
-                color = color ?: MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                ),
+                fontWeight = FontWeight.Bold,
+                color = accent,
             )
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
-// ================================================================ 可展开节点卡
+@Composable
+private fun ToolRow(
+    query: String,
+    onQuery: (String) -> Unit,
+    sort: NodeSort,
+    onSort: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            placeholder = {
+                Text(
+                    "搜索名称、URL 或分组",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Rounded.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            textStyle = MaterialTheme.typography.bodyMedium,
+            shape = RoundedCornerShape(12.dp),
+        )
+        Surface(
+            onClick = onSort,
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.Sort,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    sort.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
 
 @Composable
-private fun NodeExpandCard(
-    node: TtsNode,
-    index: Int,
-    isTesting: Boolean,
-    isOpen: Boolean,
-    selectMode: Boolean,
-    checked: Boolean,
-    editing: Boolean,
-    onToggleOpen: () -> Unit,
-    onToggleCheck: () -> Unit,
-    onStartEdit: () -> Unit,
-    onCancelEdit: () -> Unit,
-    onSaveEdit: (label: String, apiKey: String?) -> Unit,
-    onTest: () -> Unit,
-    onToggleDisable: () -> Unit,
-    onCopyUrl: () -> Unit,
-    onCopyKey: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val dimmed = node.disabled || node.isCoolingDown()
-    var editLabel by remember(editing, node.label) { mutableStateOf(node.label) }
-    var editKey by remember(editing, node.apiKey) { mutableStateOf(node.apiKey ?: "") }
-
-    AppCard(
-        onClick = if (selectMode) onToggleCheck else null,
-        containerColor = if (dimmed) MaterialTheme.colorScheme.surfaceContainerHigh
-        else MaterialTheme.colorScheme.surface,
+private fun HintBar(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
-        // 主行
         Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggleOpen),
         ) {
-            if (selectMode) {
-                Checkbox(checked = checked, onCheckedChange = { onToggleCheck() })
-            } else {
-                Text(
-                    "$index",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (node.health == TtsNode.Health.OK && !node.disabled)
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(22.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    node.label.ifBlank { node.baseUrl },
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                )
-                Text(
-                    node.baseUrl,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            if (isTesting) {
-                // 测试中：折叠状态也可见的 loading
-                CircularProgressIndicator(
-                    modifier = Modifier.size(14.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            } else {
-                Text(
-                    if (isOpen) "▲" else "▼",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        // 徽章行
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(top = 4.dp),
-        ) {
-            if (isTesting) {
-                Badge("测试中…", StatusColors.Info)
-            }
-            ApiBadge(node.apiVersion)
-            HealthBadge(node.health)
-            KeyBadge(node.keyless)
-            if (node.voiceCount > 0) {
-                Text(
-                    "${node.voiceCount} 音色",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (node.isCoolingDown()) Badge("冷却中", StatusColors.Warn)
-            if (node.disabled) Badge("已停用", StatusColors.Muted)
-            if (node.failCount > 0) {
-                Text(
-                    "连败 ${node.failCount}",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        }
-
-        // ===== 展开操作区 =====
-        if (isOpen) {
-            Spacer(Modifier.height(8.dp))
-            androidx.compose.material3.HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
+            Icon(
+                Icons.Rounded.Lightbulb,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp),
             )
-            Spacer(Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // 操作宫格（两行）
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ActionCell(Icons.Default.PlayArrow, "测试", Modifier.weight(1f), isTesting, onTest)
-                    ActionCell(Icons.Default.Label, "标签", Modifier.weight(1f), editing, onStartEdit)
-                    ActionCell(Icons.Default.Key, if (node.keyless) "补Key" else "改Key", Modifier.weight(1f), editing, onStartEdit)
-                    ActionCell(
-                        if (node.disabled) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        if (node.disabled) "启用" else "停用",
-                        Modifier.weight(1f), false, onToggleDisable,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ActionCell(Icons.Default.ContentCopy, "复制URL", Modifier.weight(1f), false, onCopyUrl)
-                    ActionCell(Icons.Default.ContentCopy, "复制Key", Modifier.weight(1f), false, onCopyKey)
-                    ActionCell(Icons.Default.Edit, "编辑", Modifier.weight(1f), editing, onStartEdit)
-                    ActionCell(Icons.Default.Delete, "删除", Modifier.weight(1f), false, onDelete, danger = true)
-                }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "批量操作可直接勾选，或点右上角清单图标进入多选模式。长按 ＋ 批量导入 URL。",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.5.sp,
+                    lineHeight = 17.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
 
-                // 行内编辑区
-                if (editing) {
-                    OutlinedTextField(
-                        value = editLabel,
-                        onValueChange = { editLabel = it },
-                        label = { Text("标签", style = MaterialTheme.typography.labelMedium) },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = editKey,
-                        onValueChange = { editKey = it },
-                        label = { Text("API Key（留空 = 免 Key）", style = MaterialTheme.typography.labelMedium) },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        "保存后建议点「测试」刷新免Key/需Key 状态",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onCancelEdit) {
-                            Text("取消", style = MaterialTheme.typography.labelLarge)
-                        }
-                        Button(onClick = { onSaveEdit(editLabel, editKey.ifBlank { null }) }) {
-                            Text("保存", style = MaterialTheme.typography.labelLarge)
+@Composable
+private fun NodeAdminCard(
+    node: TtsNode,
+    now: Long,
+    checked: Boolean,
+    testing: Boolean,
+    onToggleCheck: () -> Unit,
+    onOpen: () -> Unit,
+) {
+    val state = node.uiState(now)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+        else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            if (checked) 1.5.dp else 1.dp,
+            if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NodeSelectBox(checked = checked, onClick = onToggleCheck)
+            Spacer(Modifier.width(10.dp))
+            HealthTile(state)
+            Spacer(Modifier.width(10.dp))
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = onOpen)
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            node.label.ifBlank { node.baseUrl },
+                            modifier = Modifier.weight(1f, fill = false),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 13.5.sp,
+                                lineHeight = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Text(
+                                node.group,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.5.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
                         }
                     }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (node.lastChecked <= 0L) {
+                            node.statusLabel(now)
+                        } else {
+                            "${node.statusLabel(now)} · ${relativeTimeLabel(node.lastChecked, now)}"
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        node.baseUrl,
+                        style = MonoTextStyle.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (testing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(start = 6.dp)
+                            .size(15.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(start = 6.dp)
+                            .size(18.dp),
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ActionCell(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    active: Boolean = false,
-    onClick: () -> Unit,
-    danger: Boolean = false,
-) {
-    val contentColor = when {
-        danger -> MaterialTheme.colorScheme.error
-        active -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.small,
-        color = if (active) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = contentColor,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 6.dp),
-        ) {
-            if (active && label == "测试") {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(icon, contentDescription = label, modifier = Modifier.size(16.dp))
-            }
-            Spacer(Modifier.height(2.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-// ================================================================ 批量浮动栏
-
-@Composable
-private fun BatchBar(
-    count: Int,
-    onSelectAll: () -> Unit,
-    onBatchTest: () -> Unit,
-    onBatchDisable: () -> Unit,
-    onBatchDelete: () -> Unit,
-) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shadowElevation = 6.dp,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                "已选 $count",
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(end = 2.dp),
-            )
-            BatchBtn("全选", onClick = onSelectAll)
-            BatchBtn("测试", color = StatusColors.Ok, onClick = onBatchTest)
-            BatchBtn("停用", onClick = onBatchDisable)
-            BatchBtn("删除", color = StatusColors.Error, onClick = onBatchDelete)
-        }
-    }
-}
-
-@Composable
-private fun BatchBtn(text: String, color: Color? = null, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.small,
-        color = color ?: MaterialTheme.colorScheme.primaryContainer,
-        contentColor = color?.let { Color.White } ?: MaterialTheme.colorScheme.onPrimaryContainer,
-    ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-        )
-    }
-}
-
-// ================================================================ 添加底部弹窗
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddSheetContent(
-    autoTest: Boolean,
-    onAutoTestChange: (Boolean) -> Unit,
-    onSave: (url: String, label: String, apiKey: String?) -> Unit,
-) {
-    var url by remember { mutableStateOf("") }
-    var label by remember { mutableStateOf("") }
-    var apiKey by remember { mutableStateOf("") }
-
-    Column(
+private fun AddNodeButton(onClick: () -> Unit, onLongClick: () -> Unit) {
+    val outline = MaterialTheme.colorScheme.outline
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .navigationBarsPadding()
-            .padding(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text("添加节点", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        OutlinedTextField(
-            value = url,
-            onValueChange = { url = it },
-            label = { Text("URL", style = MaterialTheme.typography.labelMedium) },
-            placeholder = { Text("https://tts.example.com", style = MaterialTheme.typography.bodySmall) },
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = label,
-                onValueChange = { label = it },
-                label = { Text("标签（可选）", style = MaterialTheme.typography.labelMedium) },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = apiKey,
-                onValueChange = { apiKey = it },
-                label = { Text("Key（可选）", style = MaterialTheme.typography.labelMedium) },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Switch(checked = autoTest, onCheckedChange = onAutoTestChange)
-            Text(
-                "保存后自动测试（推荐）",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Button(
-            onClick = {
-                if (url.isNotBlank()) onSave(url, label, apiKey)
-            },
-            enabled = url.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("保存", style = MaterialTheme.typography.labelLarge) }
-        Text(
-            "批量粘贴：每行一个 URL，如 https://a.com|标签",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-// ================================================================ 批量导入弹窗
-
-@Composable
-private fun ImportDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (raw: String) -> Unit,
-) {
-    var text by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("批量导入 URL", style = MaterialTheme.typography.titleMedium) },
-        text = {
-            Column {
-                Text(
-                    "每行一个 URL，可加标签（url|标签）。保存为单事务，万级也只写一次。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("URL 列表", style = MaterialTheme.typography.labelMedium) },
-                    placeholder = {
-                        Text("https://a.example.com\nhttps://b.example.com|我的节点", style = MaterialTheme.typography.bodySmall)
-                    },
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp),
+            .height(50.dp)
+            .drawBehind {
+                drawRoundRect(
+                    color = outline,
+                    style = Stroke(
+                        width = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(6.dp.toPx(), 4.dp.toPx()),
+                        ),
+                    ),
+                    cornerRadius = CornerRadius(14.dp.toPx()),
                 )
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(text) },
-                enabled = text.isNotBlank(),
-            ) { Text("保存", style = MaterialTheme.typography.labelLarge) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消", style = MaterialTheme.typography.labelLarge) }
-        },
-    )
-}
-
-// ================================================================ 辅助
-
-private enum class NodeFilter(val label: String) {
-    ALL("全部"), OK("健康"), BAD("异常"), NEEDKEY("需Key"),
-    V1("新版V1"), LEGACY("老版"), COOL_DIS("冷却/停用");
-
-    fun matches(n: TtsNode): Boolean = when (this) {
-        ALL -> true
-        OK -> n.health == TtsNode.Health.OK && !n.disabled
-        BAD -> n.health == TtsNode.Health.FAIL
-        NEEDKEY -> !n.keyless
-        V1 -> n.apiVersion == ApiVersion.V1
-        LEGACY -> n.apiVersion == ApiVersion.LEGACY
-        COOL_DIS -> n.isCoolingDown() || n.disabled
+            .clip(RoundedCornerShape(14.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Rounded.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(
+            "添加节点",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
-}
-
-private enum class SortMode(val label: String) {
-    DEFAULT("默认序"), NAME("名称"), LAST("最近测试"), FAIL("失败次数"),
 }
