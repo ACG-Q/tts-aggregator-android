@@ -22,6 +22,13 @@ class AdminViewModel(
 ) : ViewModel() {
 
     val nodes: StateFlow<List<TtsNode>> = repo.nodes
+    val poolConfig = settings.poolConfig
+
+    private val _adding = MutableStateFlow(false)
+    val adding: StateFlow<Boolean> = _adding
+
+    private val _importing = MutableStateFlow(false)
+    val importing: StateFlow<Boolean> = _importing
 
     private val _testingIds = MutableStateFlow<Set<String>>(emptySet())
     val testingIds: StateFlow<Set<String>> = _testingIds
@@ -38,60 +45,118 @@ class AdminViewModel(
         url: String,
         label: String,
         apiKey: String?,
+        group: String,
         autoTest: Boolean = true,
         onDone: (String) -> Unit,
     ) {
+        if (_adding.value) return
         viewModelScope.launch(Dispatchers.IO) {
+            _adding.value = true
             try {
                 val trimmed = url.trim().removeSuffix("/")
-                if (!trimmed.startsWith("http")) {
-                    onDone("URL 无效（需以 http 开头）")
+                if (!Regex("^https?://\\S+$", RegexOption.IGNORE_CASE).matches(trimmed)) {
+                    onDone("URL 无效（需以 http(s) 开头）")
                     return@launch
                 }
-                val node = repo.saveRaw(trimmed, label.trim(), apiKey?.trim()?.ifEmpty { null })
+                val node = repo.saveRaw(
+                    baseUrl = trimmed,
+                    label = label.trim(),
+                    apiKey = apiKey?.trim()?.ifEmpty { null },
+                    group = group,
+                )
                 if (autoTest) {
-                    // 保存即测：立刻探测并更新状态
                     repo.probeAndUpdate(node.id)
                     onDone(repo.get(node.id)?.let { summary(it) } ?: "已保存：${node.baseUrl}")
                 } else {
                     onDone("已保存：${node.baseUrl}（未测试）")
                 }
             } catch (e: Exception) {
+                Log.w(TAG, "addNode failed", e)
                 onDone("保存失败: ${e.message}")
+            } finally {
+                _adding.value = false
             }
         }
     }
 
-    fun importNodes(raw: String, onDone: (String) -> Unit) {
+    fun importNodes(
+        raw: String,
+        group: String,
+        autoTest: Boolean,
+        onDone: (String) -> Unit,
+    ) {
+        if (_importing.value) return
         viewModelScope.launch(Dispatchers.IO) {
+            _importing.value = true
             try {
-                val entries = parseNodeImport(raw)
-                if (entries.isEmpty()) {
+                val drafts = parseNodeImport(raw).map { it.copy(group = group) }
+                if (drafts.isEmpty()) {
                     onDone("没有有效行（需以 http 开头）")
                     return@launch
                 }
-                repo.saveRawBatch(entries)
-                val skipped = if (raw.trimStart().startsWith("{")) {
-                    0
-                } else {
-                    (raw.lines().count { it.trim().isNotEmpty() } - entries.size).coerceAtLeast(0)
+                val existing = repo.nodes.value.map { it.baseUrl }.toSet()
+                val unique = drafts.distinctBy { it.url }.filterNot { it.url in existing }
+                val skipped = drafts.size - unique.size
+                if (unique.isEmpty()) {
+                    onDone("没有新节点，已跳过重复 $skipped 个")
+                    return@launch
                 }
-                val skippedMsg = if (skipped > 0) "，跳过 $skipped 个无效行" else ""
-                onDone("已保存 ${entries.size} 个节点（单事务写入）$skippedMsg")
+                repo.saveRawBatch(unique)
+                if (autoTest) {
+                    val addedUrls = unique.map { it.url }.toSet()
+                    val addedIds = repo.nodes.value
+                        .filter { it.baseUrl in addedUrls }
+                        .map { it.id }
+                    repo.probeAll(addedIds)
+                }
+                val skippedMsg = if (skipped > 0) "，跳过重复 $skipped 个" else ""
+                onDone("已导入 ${unique.size} 个节点$skippedMsg")
             } catch (e: Exception) {
+                Log.w(TAG, "importNodes failed", e)
                 onDone("导入失败: ${e.message}")
+            } finally {
+                _importing.value = false
             }
         }
     }
 
-    fun updateNodeMeta(id: String, label: String, apiKey: String?, onDone: (String) -> Unit) {
+    fun updateNodeMeta(
+        id: String,
+        label: String,
+        apiKey: String?,
+        group: String,
+        onDone: (String) -> Unit,
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repo.updateNodeMeta(id, label.trim(), apiKey?.trim()?.ifEmpty { null })
+                repo.updateNodeMeta(id, label.trim(), apiKey?.trim()?.ifEmpty { null }, group)
                 onDone("已更新节点信息")
             } catch (e: Exception) {
+                Log.w(TAG, "updateNodeMeta failed", e)
                 onDone("更新失败: ${e.message}")
             }
+        }
+    }
+
+    fun addToGroup(ids: Collection<String>, onDone: (String) -> Unit) {
+        if (ids.isEmpty()) {
+            onDone("先勾选节点")
+            return
+        }
+        settings.updatePoolConfig {
+            it.copy(groupIds = (it.groupIds + ids).distinct(), groupCursor = 0)
+        }
+        onDone("已加入轮询池：${ids.size} 个节点")
+    }
+
+    fun setManual(id: String) {
+        settings.updatePoolConfig { it.copy(manualId = id, manualFailCount = 0) }
+    }
+
+    fun toggleGroupMember(id: String) {
+        settings.updatePoolConfig { config ->
+            val ids = if (id in config.groupIds) config.groupIds - id else config.groupIds + id
+            config.copy(groupIds = ids, groupCursor = 0)
         }
     }
 
