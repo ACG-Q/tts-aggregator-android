@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.ui.util.Labels
 
-/** 语言快捷筛选：中文固定第一，全部固定第二，其余取声音最多的三种语言。 */
+/** 语言快捷筛选：中文固定第一，全部固定第二，随后是英语与日语。 */
 @Composable
 internal fun VoiceFilterChips(
     languages: List<Pair<String, Int>>,
@@ -48,7 +48,8 @@ internal fun VoiceFilterChips(
     onFilter: (VoiceFilter) -> Unit,
     onMoreLanguages: () -> Unit,
 ) {
-    val quick = languages.filter { it.first != "zh" }.take(3)
+    val available = languages.mapTo(mutableSetOf()) { it.first }
+    val quick = listOf("en", "ja").filter { it in available }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item(key = "chip-zh") {
             FilterChip(
@@ -64,7 +65,7 @@ internal fun VoiceFilterChips(
                 label = { Text("全部") },
             )
         }
-        items(quick, key = { it.first }) { (code, _) ->
+        items(quick, key = { it }) { code ->
             FilterChip(
                 selected = filter is VoiceFilter.Language && filter.code == code,
                 onClick = { onFilter(VoiceFilter.Language(code)) },
