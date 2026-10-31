@@ -26,4 +26,27 @@ class SynthSettingsTest {
 
         assertEquals(settings, decoded)
     }
+
+    @Test
+    fun `旧配置缺少 recentVoices 时按空列表解码`() {
+        val legacy =
+            """{"rate":0,"pitch":0,"voice":"zh-CN-XiaoxiaoNeural","style":"cheerful"}"""
+
+        val decoded = AppJson.decodeFromString(SynthSettings.serializer(), legacy)
+
+        assertEquals(emptyList<String>(), decoded.recentVoices)
+    }
+
+    @Test
+    fun `最近声音可持久化并往返解码`() {
+        val settings = SynthSettings(
+            voice = "zh-CN-XiaoxiaoNeural",
+            recentVoices = listOf("zh-CN-XiaoxiaoNeural", "en-US-AriaNeural"),
+        )
+
+        val raw = AppJson.encodeToString(SynthSettings.serializer(), settings)
+        val decoded = AppJson.decodeFromString(SynthSettings.serializer(), raw)
+
+        assertEquals(settings, decoded)
+    }
 }
