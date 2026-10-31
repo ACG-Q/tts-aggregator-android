@@ -43,7 +43,7 @@ class NavViewModelTest {
     @Test
     fun `goHome 清空栈 后续返回直接 false`() {
         val nav = NavViewModel()
-        nav.goVoice()
+        nav.goSettings()
         nav.goNodes()
         nav.goHome()
         assertEquals(Screen.Home, nav.screen.value)

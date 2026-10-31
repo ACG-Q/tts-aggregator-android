@@ -42,6 +42,8 @@ object Labels {
         "mk" to "马其顿语", "mn" to "蒙古语", "ps" to "普什图语", "uz" to "乌兹别克语",
         "zu" to "祖鲁语", "ht" to "海地克里奥尔语", "rw" to "卢旺达语", "yo" to "约鲁巴语",
         "sn" to "绍纳语", "so" to "索马里语", "xh" to "科萨语", "ig" to "伊博语",
+        "as" to "阿萨姆语", "iu" to "因纽特语", "kk" to "哈萨克语", "mt" to "马耳他语",
+        "or" to "奥里亚语", "su" to "巽他语", "wuu" to "吴语", "yue" to "粤语",
     )
 
     private val REGION = mapOf(
@@ -69,6 +71,13 @@ object Labels {
         "BY" to "白俄罗斯", "KZ" to "哈萨克斯坦", "UZ" to "乌兹别克斯坦", "AF" to "阿富汗",
         "MM" to "缅甸", "KH" to "柬埔寨", "LA" to "老挝", "MN" to "蒙古",
         "TL" to "东帝汶", "FJ" to "斐济",
+        "AL" to "阿尔巴尼亚", "BA" to "波斯尼亚和黑塞哥维那", "BO" to "玻利维亚",
+        "CR" to "哥斯达黎加", "CU" to "古巴", "DO" to "多米尼加", "EC" to "厄瓜多尔",
+        "GQ" to "赤道几内亚", "GT" to "危地马拉", "HN" to "洪都拉斯", "IR" to "伊朗",
+        "LY" to "利比亚", "MK" to "北马其顿", "MT" to "马耳他", "NI" to "尼加拉瓜",
+        "PA" to "巴拿马", "PE" to "秘鲁", "PR" to "波多黎各", "PY" to "巴拉圭",
+        "SO" to "索马里", "SV" to "萨尔瓦多", "SY" to "叙利亚", "UY" to "乌拉圭",
+        "VE" to "委内瑞拉", "YE" to "也门",
     )
 
     private val STYLE = mapOf(

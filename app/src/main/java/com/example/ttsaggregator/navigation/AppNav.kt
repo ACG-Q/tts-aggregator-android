@@ -25,7 +25,7 @@ import com.example.ttsaggregator.ui.screens.NodesScreen
 import com.example.ttsaggregator.ui.screens.PermissionsScreen
 import com.example.ttsaggregator.ui.screens.ReadingScreen
 import com.example.ttsaggregator.ui.screens.SettingsScreen
-import com.example.ttsaggregator.ui.screens.VoiceScreen
+import com.example.ttsaggregator.ui.screens.picker.VoicePickerSheet
 
 /**
  * 应用壳：一级 Tab（朗读 / 节点 / 记录）+ 子页栈 + 全屏朗读态。
@@ -41,6 +41,7 @@ fun AppNav(
     val tab by nav.tab.collectAsState()
     val playback by player.state.collectAsState()
     var readerVisible by remember { mutableStateOf(false) }
+    var voicePickerVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(playback.isActive) {
         if (!playback.isActive) readerVisible = false
@@ -73,14 +74,10 @@ fun AppNav(
                 player = player,
                 onToast = onToast,
                 onOpenSettings = nav::goSettings,
-                onOpenVoice = nav::goVoice,
+                onOpenVoice = { voicePickerVisible = true },
                 onOpenReader = { readerVisible = true },
             )
             is Screen.Nodes -> NodesScreen(
-                onToast = onToast,
-            )
-            is Screen.Voice -> VoiceScreen(
-                onBack = { nav.handleBack() },
                 onToast = onToast,
             )
             is Screen.Logs -> LogsScreen(
@@ -91,7 +88,7 @@ fun AppNav(
                 onOpenPermissions = nav::goPermissions,
                 onOpenAdmin = nav::goAdmin,
                 onOpenAbout = nav::goAbout,
-                onOpenVoice = nav::goVoice,
+                onOpenVoice = { voicePickerVisible = true },
                 onToast = onToast,
             )
             is Screen.About -> AboutScreen(
@@ -121,6 +118,17 @@ fun AppNav(
             ReadingScreen(
                 controller = player,
                 onCollapse = { readerVisible = false },
+            )
+        }
+
+        if (voicePickerVisible) {
+            VoicePickerSheet(
+                onDismiss = { voicePickerVisible = false },
+                onApplied = { message ->
+                    voicePickerVisible = false
+                    onToast(message)
+                },
+                onToast = onToast,
             )
         }
     }

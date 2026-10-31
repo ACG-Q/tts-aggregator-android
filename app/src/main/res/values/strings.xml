@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">TTS Aggregator</string>
+    <string name="app_name">Pulse</string>
     <string name="add_node">添加节点</string>
     <string name="batch_import">批量导入</string>
     <string name="url_hint">https://tts.example.com</string>
@@ -9,7 +9,7 @@
     <string name="probe_keyless">探测免 Key</string>
     <string name="save">保存</string>
     <string name="test_synthesis">测试合成</string>
-    <string name="test_text">你好，这是 TTS Aggregator 测试。</string>
+    <string name="test_text">你好，这是 Pulse 测试。</string>
     <string name="settings">设置</string>
     <string name="select_node">选择 TTS 节点</string>
     <string name="select_voice">选择语音</string>

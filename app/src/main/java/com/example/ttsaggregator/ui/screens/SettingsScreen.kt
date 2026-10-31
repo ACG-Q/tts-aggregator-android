@@ -93,13 +93,14 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val vm: SettingsViewModel = appViewModel {
-        SettingsViewModel(it.nodeRepository, it.settings, it.logStore)
+        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository)
     }
     val appSettings by vm.appSettings.collectAsState()
     val synth by vm.synthSettings.collectAsState()
     val pool by vm.poolConfig.collectAsState()
     val nodes by vm.nodes.collectAsState()
     val logCount by vm.logCount.collectAsState()
+    val voiceList by vm.voiceList.collectAsState()
     val importing by vm.importing.collectAsState()
     val version = remember { context.appVersion() }
     val scope = rememberCoroutineScope()
@@ -203,7 +204,7 @@ fun SettingsScreen(
                 subtitle = "点击选择音色与风格",
                 icon = Icons.AutoMirrored.Rounded.VolumeUp,
                 value = if (synth.voice.isBlank()) "节点默认"
-                else voiceDisplayName(emptyList(), synth.voice),
+                else voiceList.find { it.id == synth.voice }?.displayName ?: synth.voice,
                 onClick = onOpenVoice,
             )
             StepperSettingRow(
@@ -355,7 +356,7 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "TTS Aggregator · 版本 $version",
+                        "Pulse · 版本 $version",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

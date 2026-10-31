@@ -5,12 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.ttsaggregator.data.SettingsStore
 import com.example.ttsaggregator.data.SynthSettings
 import com.example.ttsaggregator.data.Voice
+import com.example.ttsaggregator.data.VoiceRefreshResult
 import com.example.ttsaggregator.data.VoiceRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
- * 语音设置页：音色列表加载 + 语音参数（语速/音调/音色）。
+ * 声音选择器：音色列表加载 + 主动更新 + 语音参数（语速/音调/音色）。
  */
 class VoiceViewModel(
     private val voices: VoiceRepository,
@@ -23,6 +24,11 @@ class VoiceViewModel(
 
     fun loadVoices(force: Boolean = false) {
         viewModelScope.launch { voices.load(force = force) }
+    }
+
+    /** 强制联网更新，结果回调在协程结束时触发。 */
+    fun refresh(onResult: (VoiceRefreshResult) -> Unit) {
+        viewModelScope.launch { onResult(voices.refresh()) }
     }
 
     fun updateSettings(transform: (SynthSettings) -> SynthSettings) {

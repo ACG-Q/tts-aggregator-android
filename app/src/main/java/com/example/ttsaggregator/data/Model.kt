@@ -83,15 +83,23 @@ data class Voice(
     @SerialName("gender") val gender: String = "",
     @SerialName("locale") val locale: String = "",
     @SerialName("style_list") val styles: List<String>? = null, // 该声音支持的风格子集（可为空=不支持）
+    /** 内置中文名；网络返回的数据由仓库按 short_name 合并补全 */
+    @SerialName("name_zh") val nameZh: String = "",
+    /** 一句中文简介；网络新声音缺失时由界面生成兜底文案 */
+    @SerialName("intro_zh") val introZh: String = "",
 ) {
+    /** 基础人名（去掉 Neural / 系列后缀），用于内置翻译匹配 */
+    val baseName: String get() = (localName.ifBlank { name }).trim().substringBefore(' ')
+
     /**
-     * 显示名三级映射（全中文）：
-     * 1. local_name（服务端本地化名，如"晓晓"）
-     * 2. 无 local_name 时（Dragon 新系列）：英文人名 → 中文人名 + 系列词逐词中文化
-     *    "Xiaoxiao Dragon HD Flash Latest" → "晓晓 龙 高清 闪速 最新版"
-     * 3. 非中文音色保留原文（Jenny / Nanami 等）
+     * 显示名四级映射（全中文）：
+     * 1. 内置/缓存的中文名 name_zh
+     * 2. local_name（服务端本地化名，如"晓晓"）
+     * 3. 无 local_name 时（Dragon 新系列）：英文人名 → 中文人名 + 系列词逐词中文化
+     * 4. 非中文音色保留原文（Jenny / Nanami 等）
      */
     val displayName: String get() {
+        if (nameZh.isNotBlank()) return nameZh
         val raw = localName.ifBlank { name }
         if (raw.isBlank()) return name
         // 人名前缀替换
@@ -141,6 +149,7 @@ data class SynthSettings(
     val rate: Int = 0,      // -100..100
     val pitch: Int = 0,     // -100..100
     val voice: String = "", // 系统 TTS 音色（空 = 节点默认）
+    val style: String = "", // 情感风格（空 = 不带 style 参数）
 )
 
 /** 一条调用日志 */
