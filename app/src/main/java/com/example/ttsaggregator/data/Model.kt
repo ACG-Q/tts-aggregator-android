@@ -150,6 +150,8 @@ data class SynthSettings(
     val pitch: Int = 0,     // -100..100
     val voice: String = "", // 系统 TTS 音色（空 = 节点默认）
     val style: String = "", // 情感风格（空 = 不带 style 参数）
+    /** 最近成功应用的声音，最新在前；旧配置缺少该字段时按空列表解码 */
+    val recentVoices: List<String> = emptyList(),
 )
 
 /** 一条调用日志 */
