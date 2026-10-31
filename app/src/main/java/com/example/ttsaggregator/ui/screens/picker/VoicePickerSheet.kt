@@ -395,22 +395,8 @@ data class VoicePick(
 }
 
 /**
- * locale 解析：兼容 `zh-CN`、`iu-Cans-CA`（含四字母脚本子标签）与 `zh-CN-guangxi`（方言）。
- * 语言取首段，地区跳过脚本子标签后取实际地区。
+ * locale 解析已移动到 `VoiceQuery.kt`，此处仅保留界面代码。
  */
-internal fun Voice.localeLang(): String = localeSegments(this).first
-
-internal fun Voice.localeRegion(): String? = localeSegments(this).second
-
-private fun localeSegments(voice: Voice): Pair<String, String?> {
-    val parts = voice.locale.ifBlank { voice.id }.split('-')
-    val region = when {
-        parts.size >= 3 && parts[1].length == 4 -> parts[2]
-        parts.size >= 2 -> parts[1]
-        else -> null
-    }
-    return parts.firstOrNull().orEmpty() to region
-}
 
 @Composable
 private fun VoiceRow(voice: Voice, selected: Boolean, onClick: () -> Unit) {
