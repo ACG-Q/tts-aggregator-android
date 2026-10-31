@@ -4,49 +4,78 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** 应用内页面（7 屏） */
+/** Bottom-navigation 的三个一级入口。 */
+enum class MainTab { READ, NODES, RECORDS }
+
+/** 应用内页面。Home/Nodes/Logs 是一级 Tab，其余为压栈子页。 */
 sealed class Screen {
-    object Home : Screen()       // 首页：朗读 + 调用逻辑 + 调度 + 日志简版
-    object Nodes : Screen()      // 节点列表（调用逻辑的子页）
-    object Voice : Screen()      // 语音设置（首页子页）
-    object Logs : Screen()       // 调用日志详情
-    object Settings : Screen()   // 设置（权限/节点/关于）
+    object Home : Screen()
+    object Nodes : Screen()
+    object Logs : Screen()
+    object Settings : Screen()
     object Permissions : Screen()
-    object Admin : Screen()      // 节点管理
-    object About : Screen()      // 关于（zuoban/tts 项目信息）
+    object Admin : Screen()
+    object About : Screen()
+
+    val isMain: Boolean get() = this is Home || this is Nodes || this is Logs
 }
 
 /**
- * 纯导航状态：只管"当前在哪一屏"，不持有任何业务数据。
- * 屏幕之间用 go* 方法跳转（同步压栈），handleBack 弹栈；
- * 栈空时返回 false，由调用方（OnBackPressedDispatcher）决定是否 finish Activity。
+ * 纯导航状态：一级 Tab + 子页栈。
+ * 子页压栈时记录来源页，返回时回到来源（例如节点页进设置，返回仍是节点页）。
  */
 class NavViewModel : ViewModel() {
 
     private val _screen = MutableStateFlow<Screen>(Screen.Home)
     val screen: StateFlow<Screen> = _screen
 
-    private var stack = mutableListOf<Screen>()
+    private val _tab = MutableStateFlow(MainTab.READ)
+    val tab: StateFlow<MainTab> = _tab
+
+    private val stack = mutableListOf<Screen>()
+
+    fun selectTab(tab: MainTab) {
+        _tab.value = tab
+        _screen.value = when (tab) {
+            MainTab.READ -> Screen.Home
+            MainTab.NODES -> Screen.Nodes
+            MainTab.RECORDS -> Screen.Logs
+        }
+        stack.clear()
+    }
 
     private fun push(screen: Screen) {
+        stack.add(_screen.value)
         _screen.value = screen
-        stack.add(screen)
     }
 
-    /** 弹栈返回；栈已空（停在 Home）返回 false。 */
+    /** 返回：子页出栈；一级 Tab 回到朗读；朗读页返回 false（交给系统 finish）。 */
     fun handleBack(): Boolean {
-        if (stack.isEmpty()) return false
-        stack.removeLast()
-        _screen.value = stack.lastOrNull() ?: Screen.Home
-        return true
+        if (stack.isNotEmpty()) {
+            _screen.value = stack.removeLast()
+            _tab.value = _screen.value.tabOf()
+            return true
+        }
+        return when (_screen.value) {
+            is Screen.Nodes, is Screen.Logs -> {
+                selectTab(MainTab.READ)
+                true
+            }
+            else -> false
+        }
     }
 
-    fun goHome() { _screen.value = Screen.Home; stack = mutableListOf() }
-    fun goNodes() = push(Screen.Nodes)
-    fun goVoice() = push(Screen.Voice)
-    fun goLogs() = push(Screen.Logs)
+    fun goHome() = selectTab(MainTab.READ)
+    fun goNodes() = selectTab(MainTab.NODES)
+    fun goLogs() = selectTab(MainTab.RECORDS)
     fun goSettings() = push(Screen.Settings)
     fun goPermissions() = push(Screen.Permissions)
     fun goAdmin() = push(Screen.Admin)
     fun goAbout() = push(Screen.About)
+
+    private fun Screen.tabOf(): MainTab = when (this) {
+        is Screen.Nodes -> MainTab.NODES
+        is Screen.Logs -> MainTab.RECORDS
+        else -> MainTab.READ
+    }
 }

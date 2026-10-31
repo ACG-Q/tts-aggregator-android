@@ -13,6 +13,7 @@ import com.example.ttsaggregator.data.SynthPrefs
 import com.example.ttsaggregator.data.TtsNode
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRepository
+import com.example.ttsaggregator.playback.ReadTuning
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,7 +59,10 @@ class HomeViewModel(
             try {
                 val s = synthSettings.value
                 val result = try {
-                    pool.synthesize(text, SynthPrefs(rate = s.rate, pitch = s.pitch))
+                    pool.synthesize(
+                        text,
+                        SynthPrefs(voice = s.voice, rate = s.rate, pitch = s.pitch, style = s.style),
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -75,6 +79,14 @@ class HomeViewModel(
 
     fun setMode(mode: CallMode) {
         settings.updatePoolConfig { it.copy(mode = mode) }
+    }
+
+    fun cycleRate() {
+        settings.updateSynthSettings { it.copy(rate = ReadTuning.nextRate(it.rate)) }
+    }
+
+    fun cyclePitch() {
+        settings.updateSynthSettings { it.copy(pitch = ReadTuning.nextPitch(it.pitch)) }
     }
 
     fun resetManualFailCount() {

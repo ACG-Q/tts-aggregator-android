@@ -1,24 +1,44 @@
 package com.example.ttsaggregator.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -215,5 +235,173 @@ fun SelectChip(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
         )
+    }
+}
+
+// ---------------------------------------------------------------- 子页头部
+
+/**
+ * 子页统一头部：圆形返回键 + 大标题 + 可选副标题 + 右侧操作。
+ * 已包含状态栏 inset，直接放进 Scaffold.topBar。
+ */
+@Composable
+fun PulseSubHeader(
+    title: String,
+    onBack: () -> Unit,
+    subtitle: String? = null,
+    actions: @Composable (RowScope.() -> Unit) = {},
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "返回",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            actions()
+        }
+    }
+}
+
+/** 彩色图标方块：子页卡片与设置行的视觉锚点。 */
+@Composable
+fun PulseIconTile(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    background: Color = tint.copy(alpha = 0.12f),
+    size: Int = 42,
+) {
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape((size / 3).dp))
+            .background(background),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size((size * 0.52).dp),
+        )
+    }
+}
+
+/** 品牌头像：渐变方章，子页与关于页复用。 */
+@Composable
+fun PulseBrandMark(modifier: Modifier = Modifier, size: Int = 56) {
+    val waveColor = MaterialTheme.colorScheme.onPrimary
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape((size / 3).dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.secondary,
+                    ),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.size((size * 0.62).dp)) {
+            val w = this.size.width
+            val h = this.size.height
+            val wave = Path().apply {
+                moveTo(w * 0.06f, h * 0.5f)
+                lineTo(w * 0.30f, h * 0.5f)
+                lineTo(w * 0.39f, h * 0.32f)
+                lineTo(w * 0.50f, h * 0.72f)
+                lineTo(w * 0.61f, h * 0.22f)
+                lineTo(w * 0.72f, h * 0.64f)
+                lineTo(w * 0.81f, h * 0.42f)
+                lineTo(w * 0.94f, h * 0.5f)
+            }
+            drawPath(
+                path = wave,
+                color = waveColor,
+                style = Stroke(
+                    width = h * 0.11f,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                ),
+            )
+        }
+    }
+}
+
+/** 设置入口行：图标方块 + 标题/副标题 + 箭头。 */
+@Composable
+fun SettingRow(
+    title: String,
+    subtitle: String? = null,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PulseIconTile(icon = icon, tint = tint)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (trailing != null) trailing()
+            else Text(
+                "›",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

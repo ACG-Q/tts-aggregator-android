@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.playback.PlaybackController
 import com.example.ttsaggregator.playback.ReadTuning
 import com.example.ttsaggregator.ui.appViewModel
+import com.example.ttsaggregator.ui.components.PulseBrandMark
 import com.example.ttsaggregator.ui.util.voiceDisplayName
 import com.example.ttsaggregator.viewmodel.HomeViewModel
 
@@ -117,36 +118,16 @@ fun HomeScreen(
                 .padding(start = 20.dp, end = 14.dp, top = 10.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.secondary,
-                            ),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.GraphicEq,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(23.dp),
-                )
-            }
+            PulseBrandMark(size = 38)
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "TTS Aggregator",
+                    "Pulse",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    "PULSE · 聚合朗读",
+                    "聚合朗读 · 让声音流动",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -201,10 +182,10 @@ fun HomeScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 104.dp),
+                .padding(bottom = 92.dp),
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 "今日朗读",
                 style = MaterialTheme.typography.labelMedium,
@@ -223,7 +204,7 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(14.dp))
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -236,8 +217,8 @@ fun HomeScreen(
                 ),
                 shadowElevation = 1.dp,
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(modifier = Modifier.heightIn(min = 128.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Box(modifier = Modifier.heightIn(min = 112.dp)) {
                         if (text.isBlank()) {
                             Text(
                                 "粘贴一篇文章，或在这里写下想听的内容…",
@@ -330,7 +311,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -352,11 +333,11 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(54.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(
                         Brush.linearGradient(
@@ -393,7 +374,7 @@ fun HomeScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -414,7 +395,7 @@ fun HomeScreen(
             }
 
             if (playback.isActive) {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(18.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

@@ -14,16 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,12 +27,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.ui.components.AppCard
-import com.example.ttsaggregator.ui.components.SectionHeader
+import com.example.ttsaggregator.ui.components.PulseBrandMark
+import com.example.ttsaggregator.ui.components.PulseSubHeader
 
 /**
- * 关于：应用定位说明 + 开源项目链接
+ * 关于：应用定位、能力清单与开源项目入口。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
     onBack: () -> Unit,
@@ -47,19 +42,12 @@ fun AboutScreen(
     val version = remember { context.appVersion() }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("关于") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+            PulseSubHeader(
+                title = "关于",
+                subtitle = "Pulse · 聚合朗读",
+                onBack = onBack,
             )
         },
     ) { padding ->
@@ -68,44 +56,59 @@ fun AboutScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 8.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // 标题
-            Text("TTS Aggregator", style = MaterialTheme.typography.displaySmall)
-            Text(
-                "版本 $version",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PulseBrandMark(size = 64)
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Pulse",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "版本 $version",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "把文字交给声音。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
 
-            // 简介
-            AppCard {
-                SectionHeader("这是一款「TTS 中转站聚合」应用")
-                Spacer(Modifier.height(4.dp))
+            AppCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
                 Text(
-                    "基于开源项目 zuoban/tts 搭建的服务生态，将多个独立部署的 " +
-                        "TTS 中转节点统一接入，聚合为一个系统级文本转语音引擎。",
+                    "一个「TTS 中转站聚合」客户端",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "基于开源项目 zuoban/tts 搭建的服务生态，把多个独立部署的 TTS 节点聚合成一个系统级文本转语音引擎，并在应用内提供完整的朗读体验。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            // 功能
-            AppCard {
-                SectionHeader("功能")
-                Spacer(Modifier.height(4.dp))
+            AppCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
                 Text(
-                    "· 新老两代 zuoban/tts API 自动识别（新版 V1 / 老版兼容）\n" +
-                        "· 节点池智能容灾：自动切换 · 组轮询 · 手选连败停止\n" +
-                        "· SQLite 存储，支持万级节点的搜索与批量管理\n" +
-                        "· 完整调用日志：耗时 · 音色 · 文本 · 切换链路",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    "能力",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                 )
+                Spacer(Modifier.height(8.dp))
+                Capability("新老两代 API 自动识别，新版 V1 / 老版兼容")
+                Capability("节点池容灾：自动切换 · 组轮询 · 手选连败停止")
+                Capability("朗读态逐句高亮、进度拖动、倍速与定时")
+                Capability("完整调用记录：耗时 · 音色 · 文本 · 切换链路")
             }
 
-            // 项目主页
             AppCard(
                 onClick = {
                     runCatching {
@@ -114,17 +117,18 @@ fun AboutScreen(
                         )
                     }.onFailure { onToast("无法打开浏览器：${it.message}") }
                 },
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.Link,
+                        Icons.Rounded.Link,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.width(10.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "项目主页（zuoban/tts）",
+                            "项目主页",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -134,20 +138,43 @@ fun AboutScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
+                    Text(
+                        "›",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
-            // 许可与声明
-            AppCard {
-                SectionHeader("开源许可：MIT License")
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "本应用为社区客户端，基于 zuoban/tts 的公开 API 构建，" +
-                        "与 zuoban/tts 官方无关联。部署属于你自己的中转节点即可接入。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                "MIT License · 社区客户端，与 zuoban/tts 官方无关联。部署自己的中转节点即可接入。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
         }
+    }
+}
+
+@Composable
+private fun Capability(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            "·",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

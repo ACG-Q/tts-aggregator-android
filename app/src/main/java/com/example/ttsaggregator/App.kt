@@ -33,7 +33,7 @@ class AppContainer(context: Context) {
 
     // 仓库层
     val nodeRepository = NodeRepository(appContext, nodeStore, api)
-    val voiceRepository = VoiceRepository(settings, api) { nodeRepository.nodes.value }
+    val voiceRepository = VoiceRepository(appContext, settings, api) { nodeRepository.nodes.value }
 
     // 调度层
     val nodePool = NodePool(nodeRepository, settings, logStore, api)

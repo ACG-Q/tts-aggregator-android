@@ -9,6 +9,8 @@ import com.example.ttsaggregator.data.CallMode
 import com.example.ttsaggregator.data.LogStore
 import com.example.ttsaggregator.data.NodeRepository
 import com.example.ttsaggregator.data.SettingsStore
+import com.example.ttsaggregator.data.Voice
+import com.example.ttsaggregator.data.VoiceRepository
 import com.example.ttsaggregator.data.parseNodeImport
 import com.example.ttsaggregator.playback.ReadTuning
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +29,7 @@ class SettingsViewModel(
     private val repo: NodeRepository,
     private val settings: SettingsStore,
     private val logs: LogStore,
+    private val voices: VoiceRepository,
 ) : ViewModel() {
 
     val appSettings: StateFlow<AppSettings> = settings.appSettings
@@ -34,6 +37,7 @@ class SettingsViewModel(
     val poolConfig = settings.poolConfig
     val nodes = repo.nodes
     val logCount = logs.count
+    val voiceList: StateFlow<List<Voice>> = voices.voices
 
     private val _importing = MutableStateFlow(false)
     val importing: StateFlow<Boolean> = _importing
