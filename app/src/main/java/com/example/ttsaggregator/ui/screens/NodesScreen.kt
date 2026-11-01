@@ -232,7 +232,7 @@ fun NodesScreen(
                     start = 20.dp,
                     end = 20.dp,
                     top = 2.dp,
-                    bottom = if (selectMode) 280.dp else 112.dp,
+                    bottom = if (selectMode) 260.dp else 96.dp,
                 ),
             ) {
                 item {
@@ -360,7 +360,7 @@ fun NodesScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 76.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = 72.dp),
             )
         }
     }
