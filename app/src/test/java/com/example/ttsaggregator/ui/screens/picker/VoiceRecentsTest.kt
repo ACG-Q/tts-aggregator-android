@@ -34,4 +34,26 @@ class VoiceRecentsTest {
     fun `当前声音为空且无记录时返回空列表`() {
         assertEquals(emptyList<String>(), recentVoiceIds("", emptyList(), emptySet()))
     }
+
+    @Test
+    fun `没有历史记录时不并入当前声音`() {
+        val result = recentVoiceIds(
+            currentId = "current",
+            stored = emptyList(),
+            available = setOf("current"),
+        )
+
+        assertEquals(emptyList<String>(), result)
+    }
+
+    @Test
+    fun `历史记录全部失效时返回空列表`() {
+        val result = recentVoiceIds(
+            currentId = "current",
+            stored = listOf("gone"),
+            available = setOf("current"),
+        )
+
+        assertEquals(listOf("current"), result)
+    }
 }

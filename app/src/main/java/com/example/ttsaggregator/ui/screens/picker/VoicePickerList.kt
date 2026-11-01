@@ -6,21 +6,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -29,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,14 +39,23 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.ui.util.Labels
 
-/** 语言快捷筛选：中文固定第一，全部固定第二，随后是英语与日语。 */
+private val chipTextStyle = TextStyle(
+    fontSize = 11.5.sp,
+    lineHeight = 16.sp,
+    fontWeight = FontWeight.SemiBold,
+)
+
+/** 顶部快捷筛选：常用 → 全部 → 中文 → 英语 → 其余语言，按可用宽度动态排布。 */
 @Composable
 internal fun VoiceFilterChips(
     languages: List<Pair<String, Int>>,
@@ -55,29 +63,44 @@ internal fun VoiceFilterChips(
     onFilter: (VoiceFilter) -> Unit,
     onMoreLanguages: () -> Unit,
 ) {
-    val available = languages.mapTo(mutableSetOf()) { it.first }
-    val quick = listOf("en", "ja").filter { it in available }
-    LazyRow(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    val entries = remember(languages) { chipEntries(languages) }
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 2.dp, bottom = 10.dp),
     ) {
-        item(key = "chip-zh") {
-            PickerChip("中文", filter == VoiceFilter.Chinese) { onFilter(VoiceFilter.Chinese) }
+        val spacing = with(density) { 7.dp.toPx() }
+        val horizontalPadding = with(density) { 24.dp.toPx() }
+        val widths = entries.map {
+            measurer.measure(it.label, chipTextStyle).size.width + horizontalPadding
         }
-        item(key = "chip-all") {
-            PickerChip("全部", filter == VoiceFilter.All) { onFilter(VoiceFilter.All) }
+        val moreWidth = measurer.measure("更多", chipTextStyle).size.width + horizontalPadding
+        val plan = remember(widths, constraints.maxWidth, spacing, moreWidth) {
+            planChips(widths, constraints.maxWidth.toFloat(), spacing, moreWidth)
         }
-        items(quick, key = { it }) { code ->
-            PickerChip(
-                text = Labels.lang(code),
-                selected = filter is VoiceFilter.Language && filter.code == code,
-                onClick = { onFilter(VoiceFilter.Language(code)) },
-            )
-        }
-        item(key = "chip-more") {
-            PickerChip("更多语言…", false, onMoreLanguages)
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            entries.take(plan.visibleCount).forEach { entry ->
+                PickerChip(
+                    text = entry.label,
+                    selected = chipSelected(filter, entry.filter),
+                    onClick = { onFilter(entry.filter) },
+                )
+            }
+            if (plan.overflow) {
+                PickerChip("更多", false, onMoreLanguages)
+            }
         }
     }
+}
+
+private fun chipSelected(current: VoiceFilter, entry: VoiceFilter): Boolean = when (entry) {
+    VoiceFilter.Frequent -> current == VoiceFilter.Frequent
+    VoiceFilter.Chinese -> current == VoiceFilter.Chinese
+    VoiceFilter.All -> current == VoiceFilter.All
+    is VoiceFilter.Language -> current is VoiceFilter.Language && current.code == entry.code
 }
 
 @Composable
@@ -99,9 +122,7 @@ private fun PickerChip(text: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             text,
-            fontSize = 11.5.sp,
-            lineHeight = 16.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = chipTextStyle,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
         )
     }
