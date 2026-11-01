@@ -78,7 +78,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -575,23 +574,18 @@ private fun Hero(mode: CallMode) {
     Column(Modifier.padding(top = 14.dp, bottom = 18.dp)) {
         Text(
             eyebrow,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.4.sp,
-            ),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.5.sp),
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "声音从哪里来。",
-            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp, lineHeight = 30.sp),
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineMedium,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             description,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 23.sp),
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -620,16 +614,12 @@ private fun SummaryCell(value: String, label: String, color: Color, modifier: Mo
         Column(Modifier.padding(horizontal = 10.dp, vertical = 11.dp)) {
             Text(
                 value,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 19.sp,
-                    lineHeight = 23.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                style = MaterialTheme.typography.titleLarge,
                 color = color,
             )
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -650,7 +640,7 @@ private fun ModeSegmented(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -661,8 +651,8 @@ private fun ModeSegmented(
                 onClick = { onMode(value) },
                 modifier = Modifier
                     .weight(1f)
-                    .height(34.dp),
-                shape = RoundedCornerShape(9.dp),
+                    .height(36.dp),
+                shape = MaterialTheme.shapes.extraSmall,
                 color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
                 contentColor = if (selected) MaterialTheme.colorScheme.onSurface
                 else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -671,10 +661,7 @@ private fun ModeSegmented(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         label,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
@@ -711,7 +698,7 @@ private fun NodeCard(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
-            if (isPrimary) 1.5.dp else 1.dp,
+            1.dp,
             if (isPrimary) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
             else MaterialTheme.colorScheme.outlineVariant,
         ),
@@ -732,11 +719,7 @@ private fun NodeCard(
                     Text(
                         node.label.ifBlank { node.baseUrl },
                         modifier = Modifier.weight(1f, fill = false),
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontSize = 13.5.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
+                        style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -746,7 +729,7 @@ private fun NodeCard(
                 Spacer(Modifier.height(5.dp))
                 Text(
                     meta,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -754,7 +737,7 @@ private fun NodeCard(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     node.baseUrl,
-                    style = MonoTextStyle.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                    style = MonoTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -796,7 +779,6 @@ private fun GroupTogglePill(inGroup: Boolean, onClick: () -> Unit) {
             if (inGroup) "已加入" else "加入",
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -818,10 +800,10 @@ private fun AddNodeButton(onClick: () -> Unit, onLongClick: () -> Unit) {
                             floatArrayOf(6.dp.toPx(), 4.dp.toPx()),
                         ),
                     ),
-                    cornerRadius = CornerRadius(14.dp.toPx()),
+                    cornerRadius = CornerRadius(16.dp.toPx()),
                 )
             }
-            .clip(RoundedCornerShape(14.dp))
+            .clip(MaterialTheme.shapes.large)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -854,7 +836,7 @@ private fun GroupPoolPanel(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 12.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
@@ -862,12 +844,11 @@ private fun GroupPoolPanel(
             Text(
                 "轮询池 · $selected 个节点",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(3.dp))
             Text(
                 "按顺序轮询，单节点失败自动切换。",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(10.dp))
@@ -889,7 +870,7 @@ private fun GroupPoolPanel(
                             Text(
                                 "$group ${members.size}",
                                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -919,7 +900,6 @@ private fun PoolAction(label: String, primary: Boolean, onClick: () -> Unit) {
             label,
             modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -944,10 +924,7 @@ private fun HintRow() {
             Spacer(Modifier.width(8.dp))
             Text(
                 "节点只保存地址与密钥；文本不会写入日志。",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.5.sp,
-                    lineHeight = 17.sp,
-                ),
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
