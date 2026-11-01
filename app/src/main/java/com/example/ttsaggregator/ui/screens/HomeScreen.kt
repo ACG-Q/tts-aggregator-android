@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -57,6 +58,7 @@ import com.example.ttsaggregator.playback.PlaybackController
 import com.example.ttsaggregator.playback.ReadTuning
 import com.example.ttsaggregator.ui.appViewModel
 import com.example.ttsaggregator.ui.components.PulseBrandMark
+import com.example.ttsaggregator.ui.components.PulseMainHeader
 import com.example.ttsaggregator.ui.util.voiceDisplayName
 import com.example.ttsaggregator.viewmodel.HomeViewModel
 
@@ -111,72 +113,41 @@ fun HomeScreen(
             .fillMaxSize()
             .statusBarsPadding(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(start = 20.dp, end = 14.dp, top = 10.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PulseBrandMark(size = 38)
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Pulse",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    "聚合朗读 · 让声音流动",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Surface(
-                shape = RoundedCornerShape(999.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant,
-                ),
-            ) {
+        PulseMainHeader(
+            title = "Pulse",
+            subtitle = "聚合朗读 · 让声音流动",
+            leading = { PulseBrandMark(size = 38) },
+            actions = {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         Modifier
-                            .size(7.dp)
+                            .size(6.dp)
                             .background(MaterialTheme.colorScheme.secondary, CircleShape),
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "服务运行中",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
-            }
-            Surface(
-                onClick = onOpenSettings,
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant,
-                ),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
+                Spacer(Modifier.width(4.dp))
+                IconButton(onClick = onOpenSettings, modifier = Modifier.size(40.dp)) {
                     Icon(
                         Icons.Rounded.Settings,
                         contentDescription = "设置",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(21.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-        }
+            },
+        )
 
         Column(
             modifier = Modifier
