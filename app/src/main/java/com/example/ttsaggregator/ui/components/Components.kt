@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +40,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.data.ApiVersion
@@ -53,19 +54,24 @@ import com.example.ttsaggregator.ui.theme.StatusColors
 
 // ---------------------------------------------------------------- 卡片
 
-/** 扁平描边卡片（默认无点击），全站卡片外观的唯一出处 */
+/** 扁平卡片（默认无点击、无描边），全站卡片外观的唯一出处 */
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(12.dp),
+    contentPadding: PaddingValues = PaddingValues(14.dp),
     containerColor: Color = MaterialTheme.colorScheme.surface,
+    bordered: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val cardModifier = modifier.fillMaxWidth()
     val shape = MaterialTheme.shapes.medium
     val colors = CardDefaults.cardColors(containerColor = containerColor)
-    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    val border = if (bordered) {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    } else {
+        null
+    }
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
 
     if (onClick != null) {
@@ -109,7 +115,7 @@ fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(title, style = MaterialTheme.typography.titleSmall)
         when {
             trailing != null -> trailing()
             hint != null -> Text(
@@ -136,7 +142,7 @@ fun NavRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(title, style = MaterialTheme.typography.titleSmall)
                 if (subtitle != null) {
                     Text(
                         subtitle,
@@ -209,6 +215,69 @@ fun ApiBadge(version: ApiVersion, modifier: Modifier = Modifier) = when (version
     ApiVersion.UNKNOWN -> Badge("版本未知", StatusColors.Muted, modifier)
 }
 
+// ---------------------------------------------------------------- 设置分组
+
+/** 一个分组 = 一个白色容器；组内行用 SettingDivider 分隔 */
+@Composable
+fun SettingGroup(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(content = content)
+    }
+}
+
+/** 组内分隔线：左侧对齐到文字起点（14 + 34 + 14） */
+@Composable
+fun SettingDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 62.dp, end = 14.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
+/** 设置行骨架：图标 + 标题/副标题 + 自定义尾部，普通行与步进器行共用 */
+@Composable
+fun SettingRowLayout(
+    icon: ImageVector,
+    title: String,
+    subtitle: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (RowScope.() -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PulseIconTile(icon = icon, tint = tint, size = 34)
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        trailing?.invoke(this)
+    }
+}
+
 // ---------------------------------------------------------------- 芯片
 
 /** 单选过滤芯片（状态筛选、日志过滤共用） */
@@ -232,8 +301,7 @@ fun SelectChip(
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
         )
     }
 }
@@ -269,7 +337,6 @@ fun PulseSubHeader(
                 Text(
                     title,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -285,6 +352,50 @@ fun PulseSubHeader(
             }
             actions()
         }
+    }
+}
+
+/**
+ * 一级页面统一顶部：可选前置图标 + 标题/副标题 + 右侧操作。
+ * 已含水平内边距，调用方只需提供 statusBarsPadding。
+ */
+@Composable
+fun PulseMainHeader(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    titleStyle: TextStyle = MaterialTheme.typography.titleLarge,
+    leading: @Composable (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(10.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = titleStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        actions()
     }
 }
 
@@ -357,7 +468,7 @@ fun PulseBrandMark(modifier: Modifier = Modifier, size: Int = 56) {
     }
 }
 
-/** 设置入口行：图标方块 + 标题/副标题 + 箭头。 */
+/** 设置入口行：图标方块 + 标题/副标题 + 箭头（需放在 SettingGroup 内） */
 @Composable
 fun SettingRow(
     title: String,
@@ -367,41 +478,22 @@ fun SettingRow(
     tint: Color = MaterialTheme.colorScheme.primary,
     trailing: @Composable (() -> Unit)? = null,
 ) {
-    Surface(
+    SettingRowLayout(
+        icon = icon,
+        title = title,
+        subtitle = subtitle,
+        tint = tint,
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PulseIconTile(icon = icon, tint = tint)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+        trailing = {
+            if (trailing != null) {
+                trailing()
+            } else {
                 Text(
-                    title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    "›",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
-            if (trailing != null) trailing()
-            else Text(
-                "›",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        },
+    )
 }
