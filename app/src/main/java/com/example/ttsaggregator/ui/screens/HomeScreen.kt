@@ -47,12 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.playback.PlaybackController
 import com.example.ttsaggregator.playback.ReadTuning
@@ -159,9 +157,8 @@ fun HomeScreen(
             Spacer(Modifier.height(12.dp))
             Text(
                 "今日朗读",
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -186,7 +183,7 @@ fun HomeScreen(
                     if (showEmptyError) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.outlineVariant,
                 ),
-                shadowElevation = 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Box(modifier = Modifier.heightIn(min = 112.dp)) {
@@ -308,16 +305,9 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.86f),
-                            ),
-                        ),
-                    )
+                    .height(50.dp)
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.primary)
                     .clickable(enabled = !speaking) { startReading() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -333,7 +323,7 @@ fun HomeScreen(
                             Icons.Rounded.PlayArrow,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                     Spacer(Modifier.width(8.dp))
@@ -341,7 +331,6 @@ fun HomeScreen(
                         if (speaking) "正在合成…" else "开始朗读",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -374,7 +363,6 @@ fun HomeScreen(
                     Text(
                         "继续听",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
@@ -421,8 +409,7 @@ fun HomeScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 playback.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleSmall,
                                 maxLines = 1,
                             )
                             Text(

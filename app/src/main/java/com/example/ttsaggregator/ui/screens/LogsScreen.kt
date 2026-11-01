@@ -28,7 +28,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.data.CallLog
 import com.example.ttsaggregator.data.CallMode
@@ -131,15 +130,13 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
             Spacer(Modifier.width(8.dp))
             Text(
                 shortUrl(log.nodeUrl),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
             )
             Text(
                 if (log.success) "成功" else "失败",
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
                 color = if (log.success) MaterialTheme.colorScheme.secondary
                 else MaterialTheme.colorScheme.error,
             )
@@ -217,7 +214,6 @@ private fun MetaTag(text: String, warn: Boolean = false) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
             color = if (warn) MaterialTheme.colorScheme.onTertiaryContainer
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
