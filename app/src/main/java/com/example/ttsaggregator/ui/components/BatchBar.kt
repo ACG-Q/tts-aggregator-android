@@ -21,9 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun BatchBar(
@@ -43,9 +41,9 @@ fun BatchBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 10.dp,
+        shadowElevation = 6.dp,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -53,7 +51,6 @@ fun BatchBar(
                 Text(
                     "已选 $selectedCount 个",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.weight(1f))
                 BarTextButton(
@@ -115,8 +112,7 @@ private fun BarAction(
         ) {
             Text(
                 label,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelMedium,
             )
         }
     }
@@ -139,7 +135,6 @@ private fun BarTextButton(
             text,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
         )
     }
 }

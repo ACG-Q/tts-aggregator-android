@@ -118,7 +118,7 @@ fun LogsScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = 6.dp,
-                    bottom = 92.dp,
+                    bottom = 76.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

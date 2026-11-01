@@ -182,7 +182,7 @@ fun HomeScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 92.dp),
+                .padding(bottom = 76.dp),
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(12.dp))
