@@ -80,4 +80,62 @@ class VoiceQueryTest {
         assertEquals("zh", groups.first().first)
         assertEquals(2, groups.first().second.size)
     }
+
+    @Test
+    fun `常用筛选按最近顺序返回且忽略其他分类`() {
+        val recent = listOf("ja-JP-NanamiNeural", "zh-CN-XiaoxiaoNeural")
+        val result = filterVoices(voices, VoiceFilter.Frequent, recent)
+
+        assertEquals(recent, result.map { it.id })
+    }
+
+    @Test
+    fun `常用筛选过滤已不存在的声音`() {
+        val result = filterVoices(voices, VoiceFilter.Frequent, listOf("gone", "en-US-AriaNeural"))
+
+        assertEquals(listOf("en-US-AriaNeural"), result.map { it.id })
+    }
+
+    @Test
+    fun `默认筛选有记录为常用无记录为中文`() {
+        assertEquals(VoiceFilter.Chinese, defaultFilter(emptyList()))
+        assertEquals(VoiceFilter.Frequent, defaultFilter(listOf("zh-CN-XiaoxiaoNeural")))
+    }
+
+    @Test
+    fun `chips 顺序固定为常用全部中文英语其余语言`() {
+        val entries = chipEntries(languageOptions(voices))
+
+        assertEquals(
+            listOf("常用", "全部", "中文", "英语", "日语"),
+            entries.map { it.label },
+        )
+        assertEquals(VoiceFilter.Frequent, entries.first().filter)
+    }
+
+    @Test
+    fun `chips 全部放下时不显示更多`() {
+        val plan = planChips(listOf(40f, 40f, 40f), available = 200f, spacing = 10f, moreWidth = 50f)
+
+        assertEquals(ChipPlan(3, false), plan)
+    }
+
+    @Test
+    fun `chips 放不下时保留前缀并标记更多`() {
+        val plan = planChips(listOf(60f, 60f, 60f, 60f), available = 220f, spacing = 10f, moreWidth = 50f)
+
+        assertEquals(ChipPlan(2, true), plan)
+    }
+
+    @Test
+    fun `chips 仅剩更多也放不下时仍标记溢出`() {
+        val plan = planChips(listOf(200f), available = 100f, spacing = 10f, moreWidth = 90f)
+
+        assertEquals(ChipPlan(0, true), plan)
+    }
+
+    @Test
+    fun `chips 空列表无溢出`() {
+        assertEquals(ChipPlan(0, false), planChips(emptyList(), 100f, 10f, 50f))
+    }
 }

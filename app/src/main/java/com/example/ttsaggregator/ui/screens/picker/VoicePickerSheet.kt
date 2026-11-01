@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -72,9 +74,10 @@ fun VoicePickerSheet(
     val settings by vm.synthSettings.collectAsState()
 
     var query by remember { mutableStateOf("") }
-    var filter by remember { mutableStateOf<VoiceFilter>(VoiceFilter.Chinese) }
+    var filterOverride by remember { mutableStateOf<VoiceFilter?>(null) }
     var expandedId by remember { mutableStateOf<String?>(null) }
     var languageGridOpen by remember { mutableStateOf(false) }
+    var clearRecentsConfirm by remember { mutableStateOf(false) }
 
     val languages = remember(voices) { languageOptions(voices) }
     val availableIds = remember(voices) { voices.map { it.id }.toSet() }
@@ -85,14 +88,23 @@ fun VoicePickerSheet(
         recentIds.mapNotNull { id -> voices.find { it.id == id } }
     }
     val recentSet = remember(recentIds) { recentIds.toSet() }
-    val content = remember(voices, query, filter, recentSet) {
+    val filter = filterOverride ?: defaultFilter(recentIds)
+    val isFrequent = filter == VoiceFilter.Frequent
+    val content = remember(voices, query, filter, recentIds, recentSet) {
         if (query.isBlank()) {
-            filterVoices(voices, filter).filterNot { it.id in recentSet }
+            if (filter == VoiceFilter.Frequent) {
+                filterVoices(voices, VoiceFilter.Frequent, recentIds)
+            } else {
+                filterVoices(voices, filter).filterNot { it.id in recentSet }
+            }
         } else {
             searchVoices(voices, query)
         }
     }
-    val groups = remember(content) { groupVoicesByLanguage(content) }
+    val groups = remember(content, query, isFrequent) {
+        if (query.isBlank() && isFrequent) emptyList() else groupVoicesByLanguage(content)
+    }
+    val showRecentGroup = query.isBlank() && !isFrequent && recentVoices.isNotEmpty()
 
     val applyVoice: (Voice, String?) -> Unit = { voice, style ->
         vm.updateSettings {
@@ -296,7 +308,7 @@ fun VoicePickerSheet(
                     languages = languages,
                     selected = (filter as? VoiceFilter.Language)?.code,
                     onPick = { code ->
-                        filter = VoiceFilter.Language(code)
+                        filterOverride = VoiceFilter.Language(code)
                         query = ""
                         languageGridOpen = false
                         expandedId = null
@@ -310,7 +322,7 @@ fun VoicePickerSheet(
                     languages = languages,
                     filter = filter,
                     onFilter = {
-                        filter = it
+                        filterOverride = it
                         query = ""
                         expandedId = null
                     },
@@ -343,7 +355,7 @@ fun VoicePickerSheet(
                             )
                         }
                     }
-                    groups.isEmpty() -> {
+                    content.isEmpty() -> {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -370,7 +382,7 @@ fun VoicePickerSheet(
                                             if (query.isNotBlank()) {
                                                 query = ""
                                             } else {
-                                                filter = VoiceFilter.Chinese
+                                                filterOverride = VoiceFilter.Chinese
                                             }
                                         }
                                         .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -410,9 +422,34 @@ fun VoicePickerSheet(
                                     }
                                 }
                             }
-                            if (query.isBlank() && recentVoices.isNotEmpty()) {
+                            if (query.isBlank() && isFrequent) {
                                 item(key = "recent-header") {
-                                    SectionHeader("最近使用", recentVoices.size)
+                                    SectionHeader(
+                                        title = "最近使用",
+                                        count = content.size,
+                                        actionLabel = "删除记录",
+                                        onAction = { clearRecentsConfirm = true },
+                                    )
+                                }
+                                items(content, key = { "frequent-${it.id}" }) { voice ->
+                                    VoicePickerRow(
+                                        voice = voice,
+                                        isCurrent = voice.id == settings.voice,
+                                        expanded = expandedId == voice.id,
+                                        currentStyle = settings.style,
+                                        onToggle = { toggleVoice(voice) },
+                                        onPickStyle = { style -> applyVoice(voice, style) },
+                                    )
+                                }
+                            }
+                            if (showRecentGroup) {
+                                item(key = "recent-header") {
+                                    SectionHeader(
+                                        title = "最近使用",
+                                        count = recentVoices.size,
+                                        actionLabel = "删除记录",
+                                        onAction = { clearRecentsConfirm = true },
+                                    )
                                 }
                                 items(recentVoices, key = { "recent-${it.id}" }) { voice ->
                                     VoicePickerRow(
@@ -480,6 +517,58 @@ fun VoicePickerSheet(
             }
         }
     }
+
+    if (clearRecentsConfirm) {
+        AlertDialog(
+            onDismissRequest = { clearRecentsConfirm = false },
+            title = {
+                Text(
+                    "删除最近使用记录？",
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Text(
+                    "删除后将不再显示最近使用的音色，此操作不可撤销。",
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.updateSettings { it.copy(recentVoices = emptyList()) }
+                        if (filter == VoiceFilter.Frequent) {
+                            filterOverride = VoiceFilter.Chinese
+                        }
+                        expandedId = null
+                        clearRecentsConfirm = false
+                        onToast("已删除最近使用记录")
+                    },
+                ) {
+                    Text(
+                        "删除",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearRecentsConfirm = false }) {
+                    Text(
+                        "取消",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -496,7 +585,12 @@ private fun SmallIconButton(onClick: () -> Unit, content: @Composable () -> Unit
 }
 
 @Composable
-private fun SectionHeader(title: String, count: Int) {
+private fun SectionHeader(
+    title: String,
+    count: Int,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -519,5 +613,19 @@ private fun SectionHeader(title: String, count: Int) {
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.outline,
         )
+        if (actionLabel != null && onAction != null) {
+            Spacer(Modifier.weight(1f))
+            Text(
+                actionLabel,
+                fontSize = 10.5.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onAction)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
     }
 }
