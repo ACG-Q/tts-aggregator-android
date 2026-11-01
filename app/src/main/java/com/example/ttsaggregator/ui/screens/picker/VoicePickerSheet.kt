@@ -1,5 +1,7 @@
 package com.example.ttsaggregator.ui.screens.picker
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -21,13 +25,12 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,9 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRefreshResult
 import com.example.ttsaggregator.ui.appViewModel
@@ -121,26 +128,27 @@ fun VoicePickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.92f)
-                .imePadding()
-                .padding(bottom = 8.dp),
+                .fillMaxHeight(0.88f)
+                .imePadding(),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(start = 18.dp, end = 8.dp, top = 2.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.Top,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "选择声音",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.25).sp,
                     )
                     Text(
                         if (voices.isEmpty()) {
@@ -148,85 +156,141 @@ fun VoicePickerSheet(
                         } else {
                             "${voices.size} 个内置声音 · 离线可用"
                         },
-                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 3.dp),
                     )
                 }
-                TextButton(
-                    onClick = {
-                        if (loading) return@TextButton
-                        vm.refresh { result ->
-                            when (result) {
-                                is VoiceRefreshResult.Success ->
-                                    onToast("已更新 ${result.count} 个声音")
-                                is VoiceRefreshResult.Failure ->
-                                    onToast("更新失败：${result.reason}，继续使用内置数据")
-                                VoiceRefreshResult.Busy -> onToast("正在更新，请稍候")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SmallIconButton(
+                        onClick = {
+                            if (loading) return@SmallIconButton
+                            vm.refresh { result ->
+                                when (result) {
+                                    is VoiceRefreshResult.Success ->
+                                        onToast("已更新 ${result.count} 个声音")
+                                    is VoiceRefreshResult.Failure ->
+                                        onToast("更新失败：${result.reason}，继续使用内置数据")
+                                    VoiceRefreshResult.Busy -> onToast("正在更新，请稍候")
+                                }
                             }
+                        },
+                    ) {
+                        if (loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                contentDescription = "更新声音",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
-                    },
-                    enabled = !loading,
-                ) {
-                    if (loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
+                    }
+                    SmallIconButton(onClick = onDismiss) {
                         Icon(
-                            Icons.Rounded.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            Icons.Rounded.Close,
+                            contentDescription = "关闭",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
-                    Spacer(Modifier.width(5.dp))
-                    Text(if (loading) "更新中" else "更新")
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, contentDescription = "关闭")
                 }
             }
 
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                placeholder = { Text("搜索声音、语言或地区") },
-                leadingIcon = {
-                    Icon(Icons.Rounded.Search, contentDescription = null)
-                },
-                trailingIcon = if (query.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "清除搜索")
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 10.dp),
+                shape = RoundedCornerShape(13.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Box(Modifier.weight(1f)) {
+                        if (query.isEmpty()) {
+                            Text(
+                                "搜索声音、语言或地区",
+                                fontSize = 13.5.sp,
+                                lineHeight = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        BasicTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            textStyle = TextStyle(
+                                fontSize = 13.5.sp,
+                                lineHeight = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            ),
+                            singleLine = true,
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (query.isNotEmpty()) {
+                        Spacer(Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { query = "" },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = "清除搜索",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
                         }
                     }
-                } else {
-                    null
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.large,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            )
+                }
+            }
 
             if (languageGridOpen) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         "全部语言",
-                        style = MaterialTheme.typography.labelLarge,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = { languageGridOpen = false }) {
-                        Text("返回")
-                    }
+                    Text(
+                        "返回",
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { languageGridOpen = false }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
                 }
                 LanguageGrid(
                     languages = languages,
@@ -239,7 +303,7 @@ fun VoicePickerSheet(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 16.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 )
             } else {
                 VoiceFilterChips(
@@ -273,7 +337,8 @@ fun VoicePickerSheet(
                         ) {
                             Text(
                                 "暂无声音数据，点右上角更新",
-                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 12.5.sp,
+                                lineHeight = 18.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -288,20 +353,28 @@ fun VoicePickerSheet(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     "没有匹配的声音",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 12.5.sp,
+                                    lineHeight = 18.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                TextButton(
-                                    onClick = {
-                                        if (query.isNotBlank()) {
-                                            query = ""
-                                        } else {
-                                            filter = VoiceFilter.Chinese
+                                Text(
+                                    if (query.isNotBlank()) "清除搜索" else "回到中文",
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .padding(top = 6.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            if (query.isNotBlank()) {
+                                                query = ""
+                                            } else {
+                                                filter = VoiceFilter.Chinese
+                                            }
                                         }
-                                    },
-                                ) {
-                                    Text(if (query.isNotBlank()) "清除搜索" else "回到中文")
-                                }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                )
                             }
                         }
                     }
@@ -311,9 +384,32 @@ fun VoicePickerSheet(
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            contentPadding = PaddingValues(bottom = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            contentPadding = PaddingValues(bottom = 10.dp),
                         ) {
+                            if (query.isNotBlank()) {
+                                item(key = "search-caption") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 8.dp),
+                                    ) {
+                                        Text(
+                                            "${content.size} 个声音 · 中文优先",
+                                            fontSize = 10.5.sp,
+                                            lineHeight = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Text(
+                                            "点击即应用",
+                                            fontSize = 10.5.sp,
+                                            lineHeight = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
                             if (query.isBlank() && recentVoices.isNotEmpty()) {
                                 item(key = "recent-header") {
                                     SectionHeader("最近使用", recentVoices.size)
@@ -323,6 +419,7 @@ fun VoicePickerSheet(
                                         voice = voice,
                                         isCurrent = voice.id == settings.voice,
                                         expanded = expandedId == voice.id,
+                                        currentStyle = settings.style,
                                         onToggle = { toggleVoice(voice) },
                                         onPickStyle = { style -> applyVoice(voice, style) },
                                     )
@@ -337,6 +434,7 @@ fun VoicePickerSheet(
                                         voice = voice,
                                         isCurrent = voice.id == settings.voice,
                                         expanded = expandedId == voice.id,
+                                        currentStyle = settings.style,
                                         onToggle = { toggleVoice(voice) },
                                         onPickStyle = { style -> applyVoice(voice, style) },
                                     )
@@ -347,29 +445,53 @@ fun VoicePickerSheet(
                 }
             }
 
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "点击声音即可应用",
-                    style = MaterialTheme.typography.labelSmall,
+                    "默认中文置顶；知道名字就直接搜",
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(
-                    onClick = {
-                        vm.updateSettings { it.copy(voice = "", style = "") }
-                        onDismiss()
-                        onApplied("已恢复默认音色")
-                    },
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable {
+                            vm.updateSettings { it.copy(voice = "", style = "") }
+                            onDismiss()
+                            onApplied("已恢复默认音色")
+                        }
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
                 ) {
-                    Text("恢复默认")
+                    Text(
+                        "恢复默认",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SmallIconButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -378,19 +500,23 @@ private fun SectionHeader(title: String, count: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 4.dp, top = 10.dp, bottom = 2.dp),
+            .padding(start = 4.dp, top = 14.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             title,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 10.5.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.width(6.dp))
         Text(
             "$count",
-            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.5.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.outline,
         )
     }
