@@ -37,6 +37,7 @@ import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.ui.appViewModel
 import com.example.ttsaggregator.ui.components.AppCard
 import com.example.ttsaggregator.ui.components.EmptyState
+import com.example.ttsaggregator.ui.components.PulseMainHeader
 import com.example.ttsaggregator.ui.components.SelectChip
 import com.example.ttsaggregator.ui.util.formatClock
 import com.example.ttsaggregator.ui.util.formatLatency
@@ -62,36 +63,24 @@ fun LogsScreen(
             .fillMaxSize()
             .statusBarsPadding(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 10.dp, top = 14.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "记录",
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-                Text(
-                    "最近 ${logs.size} 条调用 · 成功、失败与节点切换",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(
-                onClick = {
+        PulseMainHeader(
+            title = "记录",
+            subtitle = "最近 ${logs.size} 条调用 · 成功、失败与节点切换",
+            titleStyle = MaterialTheme.typography.headlineMedium,
+            actions = {
+                IconButton(onClick = {
                     vm.clearLogs()
                     onToast("记录已清空")
-                },
-            ) {
-                Icon(
-                    Icons.Rounded.Delete,
-                    contentDescription = "清空记录",
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
+                }) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "清空记录",
+                        modifier = Modifier.size(21.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+        )
 
         Row(
             modifier = Modifier

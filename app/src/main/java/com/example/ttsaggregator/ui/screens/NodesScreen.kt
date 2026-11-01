@@ -38,7 +38,6 @@ import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Pause
@@ -51,6 +50,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -101,6 +101,8 @@ import com.example.ttsaggregator.ui.components.HealthTile
 import com.example.ttsaggregator.ui.components.NodeBadge
 import com.example.ttsaggregator.ui.components.NodeDetailSheet
 import com.example.ttsaggregator.ui.components.NodeSelectBox
+import com.example.ttsaggregator.ui.components.PulseBrandMark
+import com.example.ttsaggregator.ui.components.PulseMainHeader
 import com.example.ttsaggregator.ui.theme.MonoTextStyle
 import com.example.ttsaggregator.ui.theme.StatusColors
 import com.example.ttsaggregator.ui.util.NodeState
@@ -510,67 +512,34 @@ private fun NodesHeader(
     onAdd: () -> Unit,
     onLongAdd: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
-                        ),
-                    ),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Rounded.Dns,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(21.dp),
+    PulseMainHeader(
+        title = "节点",
+        subtitle = "$count 个已配置",
+        leading = { PulseBrandMark(size = 38) },
+        actions = {
+            HeaderIcon(
+                icon = Icons.Rounded.Checklist,
+                description = "多选",
+                active = selectMode,
+                onClick = onSelect,
             )
-        }
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                "节点",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                "$count 个已配置",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        HeaderIcon(
-            icon = Icons.Rounded.Checklist,
-            description = "多选",
-            active = selectMode,
-            onClick = onSelect,
-        )
-        Spacer(Modifier.width(8.dp))
-        Surface(
-            modifier = Modifier
-                .size(40.dp)
-                .combinedClickable(onClick = onAdd, onLongClick = onLongAdd),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Add, contentDescription = "添加节点", modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .combinedClickable(onClick = onAdd, onLongClick = onLongAdd),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Add,
+                    contentDescription = "添加节点",
+                    modifier = Modifier.size(21.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -580,23 +549,14 @@ private fun HeaderIcon(
     active: Boolean = false,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.size(40.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = if (active) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surface,
-        contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer
-        else MaterialTheme.colorScheme.onSurfaceVariant,
-        border = BorderStroke(
-            1.dp,
-            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-            else MaterialTheme.colorScheme.outlineVariant,
-        ),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = description, modifier = Modifier.size(20.dp))
-        }
+    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+        Icon(
+            icon,
+            contentDescription = description,
+            modifier = Modifier.size(21.dp),
+            tint = if (active) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
