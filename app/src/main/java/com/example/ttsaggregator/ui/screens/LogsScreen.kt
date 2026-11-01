@@ -10,22 +10,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,7 +38,6 @@ import com.example.ttsaggregator.ui.appViewModel
 import com.example.ttsaggregator.ui.components.AppCard
 import com.example.ttsaggregator.ui.components.EmptyState
 import com.example.ttsaggregator.ui.components.SelectChip
-import com.example.ttsaggregator.ui.theme.StatusColors
 import com.example.ttsaggregator.ui.util.formatClock
 import com.example.ttsaggregator.ui.util.formatLatency
 import com.example.ttsaggregator.ui.util.shortUrl
@@ -49,13 +45,11 @@ import com.example.ttsaggregator.ui.util.voiceDisplayName
 import com.example.ttsaggregator.viewmodel.LogsViewModel
 
 /**
- * 调用日志详情：过滤（全部/成功/失败/切换）+ 每条含耗时、模式、
- * 尝试次数、文本长度、切换来源、错误详情、冷却触发
+ * 记录一级页：每次节点调用的成功、失败、切换与耗时。
+ * 过滤维度由 LogStore 维护，切换即异步重查，不在 UI 层自行过滤。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogsScreen(
-    onBack: () -> Unit,
     onToast: (String) -> Unit,
 ) {
     val vm: LogsViewModel = appViewModel { LogsViewModel(it.logStore, it.voiceRepository) }
@@ -63,61 +57,73 @@ fun LogsScreen(
     val filter by vm.filter.collectAsState()
     val voices by vm.voiceList.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("调用日志") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        vm.clearLogs()
-                        onToast("日志已清空")
-                    }) {
-                        Icon(Icons.Default.Delete, contentDescription = "清空")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        },
-    ) { padding ->
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+    ) {
+        Row(
             modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 10.dp, top = 14.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // 过滤芯片
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                SelectChip("全部", selected = filter == LogFilter.ALL, onClick = { vm.setFilter(LogFilter.ALL) })
-                SelectChip("成功", selected = filter == LogFilter.OK, onClick = { vm.setFilter(LogFilter.OK) })
-                SelectChip("失败", selected = filter == LogFilter.FAIL, onClick = { vm.setFilter(LogFilter.FAIL) })
-                SelectChip("切换", selected = filter == LogFilter.SWITCH, onClick = { vm.setFilter(LogFilter.SWITCH) })
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "记录",
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Text(
+                    "最近 ${logs.size} 条调用 · 成功、失败与节点切换",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            IconButton(
+                onClick = {
+                    vm.clearLogs()
+                    onToast("记录已清空")
+                },
+            ) {
+                Icon(
+                    Icons.Rounded.Delete,
+                    contentDescription = "清空记录",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
 
-            if (logs.isEmpty()) {
-                EmptyState("暂无日志", Modifier.padding(horizontal = 12.dp, vertical = 24.dp))
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(logs, key = { it.id }) { log ->
-                        LogDetailCard(log, voices)
-                    }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SelectChip("全部", filter == LogFilter.ALL, onClick = { vm.setFilter(LogFilter.ALL) })
+            SelectChip("成功", filter == LogFilter.OK, onClick = { vm.setFilter(LogFilter.OK) })
+            SelectChip("失败", filter == LogFilter.FAIL, onClick = { vm.setFilter(LogFilter.FAIL) })
+            SelectChip("切换", filter == LogFilter.SWITCH, onClick = { vm.setFilter(LogFilter.SWITCH) })
+        }
+
+        if (logs.isEmpty()) {
+            EmptyState(
+                "还没有记录。开始第一次朗读后，这里会出现节点调用明细。",
+                Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 6.dp,
+                    bottom = 92.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(logs, key = { it.id }) { log ->
+                    LogDetailCard(log, voices)
                 }
             }
         }
@@ -127,7 +133,6 @@ fun LogsScreen(
 @Composable
 private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
     AppCard {
-        // 头部：时间 + 节点 + 结果
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 formatClock(log.time),
@@ -146,39 +151,36 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
                 if (log.success) "成功" else "失败",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (log.success) MaterialTheme.colorScheme.primary
+                color = if (log.success) MaterialTheme.colorScheme.secondary
                 else MaterialTheme.colorScheme.error,
             )
         }
 
-        // 文本内容预览
         if (log.textPreview.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
             Text(
-                "文本 ${log.textPreview}${if (log.textLen > log.textPreview.length) "…" else ""}",
-                style = MaterialTheme.typography.labelSmall,
+                "「${log.textPreview}${if (log.textLen > log.textPreview.length) "…" else ""}」",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
             )
         }
 
-        // 元数据标签
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             MetaTag("耗时 ${formatLatency(log.latencyMs)}")
             MetaTag(
-                    when (log.mode) {
-                        CallMode.AUTO -> "自动"
-                        CallMode.GROUP -> "组轮询"
-                        CallMode.MANUAL -> "手选"
-                    },
+                when (log.mode) {
+                    CallMode.AUTO -> "自动"
+                    CallMode.GROUP -> "组轮询"
+                    CallMode.MANUAL -> "手选"
+                },
             )
-            MetaTag("第 ${log.attempt} 次尝试")
-            MetaTag("文本 ${log.textLen} 字")
+            MetaTag("第 ${log.attempt} 次")
+            MetaTag("${log.textLen} 字")
             if (log.triggeredCooldown) MetaTag("触发冷却 10min", warn = true)
         }
 
-        // 音色与参数
         if (log.voice.isNotBlank() || log.rate != 0 || log.pitch != 0) {
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -188,7 +190,6 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
             }
         }
 
-        // 切换来源
         log.fromNode?.let {
             Spacer(Modifier.height(4.dp))
             Text(
@@ -198,7 +199,6 @@ private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
             )
         }
 
-        // 错误详情
         log.error?.let {
             Spacer(Modifier.height(6.dp))
             Surface(
