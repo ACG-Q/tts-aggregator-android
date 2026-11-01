@@ -7,12 +7,13 @@ import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 
-/** 统一圆角语言：卡片 14 / 控件 10 / 小标签 6 */
+/** 统一圆角语言：卡片 18 / 控件 14 / 小组件 10 / 标签 8 */
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
+    extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(10.dp),
     medium = RoundedCornerShape(14.dp),
     large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
 @Composable

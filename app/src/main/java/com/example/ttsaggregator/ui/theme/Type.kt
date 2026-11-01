@@ -7,48 +7,51 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * 紧凑字阶（面向手机）：整体比 Material 默认小 1-2 号，
- * 行高同步收紧，保证一屏信息密度。
- *
- * display/headline 只在「关于」页用；日常界面最高用到 titleLarge(17)。
+ * 手机字阶：标题更疏、正文更松，朗读优先界面允许一屏只做一件事。
+ * display/headline 只用于品牌区；列表与控件使用 titleSmall 以下。
  */
 val AppTypography = Typography(
     displaySmall = TextStyle(
-        fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold,
-        letterSpacing = (-0.3).sp,
+        fontSize = 30.sp, lineHeight = 37.sp, fontWeight = FontWeight.Bold,
+        letterSpacing = (-0.6).sp,
+    ),
+    headlineMedium = TextStyle(
+        fontSize = 26.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold,
+        letterSpacing = (-0.4).sp,
     ),
     headlineSmall = TextStyle(
-        fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold,
+        fontSize = 21.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.2).sp,
     ),
     titleLarge = TextStyle(
-        fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.1).sp,
     ),
     titleMedium = TextStyle(
-        fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.1.sp,
+        fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold,
     ),
     titleSmall = TextStyle(
-        fontSize = 13.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold,
     ),
     bodyLarge = TextStyle(
-        fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Normal,
+        fontSize = 15.sp, lineHeight = 23.sp, fontWeight = FontWeight.Normal,
     ),
     bodyMedium = TextStyle(
-        fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Normal,
+        fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.Normal,
     ),
     bodySmall = TextStyle(
-        fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal,
+        fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Normal,
     ),
     labelLarge = TextStyle(
-        fontSize = 13.sp, lineHeight = 17.sp, fontWeight = FontWeight.Medium,
+        fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold,
     ),
     labelMedium = TextStyle(
-        fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Medium,
-        letterSpacing = 0.2.sp,
+        fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium,
+        letterSpacing = 0.1.sp,
     ),
     labelSmall = TextStyle(
-        fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium,
-        letterSpacing = 0.2.sp,
+        fontSize = 11.sp, lineHeight = 15.sp, fontWeight = FontWeight.Medium,
+        letterSpacing = 0.1.sp,
     ),
 )
 
