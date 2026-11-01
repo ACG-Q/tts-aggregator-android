@@ -49,13 +49,13 @@ class TtsApiClient {
     suspend fun probe(base: String, label: String = "", apiKey: String? = null): TtsNode =
         withContext(Dispatchers.IO) {
             val url = base.removeTrailingSlash()
-            val keyless = probeKeyless(url)
-            val meta = fetchMeta(url)
+            val keyless = probeKeyless(url, apiKey)
+            val meta = fetchMeta(url, apiKey)
             Log.d(TAG, "probe: $url keyless=$keyless meta=${meta != null} ver=${meta?.version}")
             TtsNode(
                 baseUrl = url,
                 label = label,
-                keyless = keyless,
+                keyless = keyless && apiKey.isNullOrBlank(),
                 apiKey = apiKey,
                 health = if (meta != null || keyless) TtsNode.Health.OK else TtsNode.Health.FAIL,
                 lastChecked = System.currentTimeMillis(),
@@ -66,12 +66,15 @@ class TtsApiClient {
         }
 
     /** 免 Key 判定：GET {base}/tts → 400 + "必须提供文本参数" ⇒ 免 Key 可用（该端点秒回，用短超时） */
-    private suspend fun probeKeyless(base: String): Boolean = retry {
-        val resp = shortHttp.newCall(Request.Builder().url("$base/tts").get().build()).await()
-        resp.use {
-            it.code == 400 && (it.body?.string()?.contains("必须提供文本参数") == true)
-        }
-    } ?: false
+    private suspend fun probeKeyless(base: String, apiKey: String?): Boolean {
+        val url = authUrl("$base/tts", apiKey) ?: return false
+        return retry {
+            val resp = shortHttp.newCall(Request.Builder().url(url).get().build()).await()
+            resp.use {
+                it.code == 400 && (it.body?.string()?.contains("必须提供文本参数") == true)
+            }
+        } ?: false
+    }
 
     /**
      * 元数据（新老版本回退，健康度优先）：
@@ -80,16 +83,18 @@ class TtsApiClient {
      * 3. 老版：/voices 拿音色数（部分部署该端点极慢 → 短超时，失败不影响健康判定，
      *    因为 keyless（/tts 可达）已足够证明老版节点可用）
      */
-    private suspend fun fetchMeta(base: String): NodeMeta? {
+    private suspend fun fetchMeta(base: String, apiKey: String?): NodeMeta? {
+        val healthUrl = authUrl("$base/api/v1/health", apiKey) ?: return null
         val isV1 = retry {
-            shortHttp.newCall(Request.Builder().url("$base/api/v1/health").get().build()).await()
+            shortHttp.newCall(Request.Builder().url(healthUrl).get().build()).await()
                 .use { it.isSuccessful }
         } ?: return null // 连 health 都不通 → 无法判定
 
         if (isV1) {
             // 新版：拉音色数（失败也判 V1 可用）
+            val voicesUrl = authUrl("$base/api/v1/voices", apiKey) ?: return NodeMeta(0, DEFAULT_VOICE, ApiVersion.V1)
             val meta = retry {
-                shortHttp.newCall(Request.Builder().url("$base/api/v1/voices").get().build()).await()
+                shortHttp.newCall(Request.Builder().url(voicesUrl).get().build()).await()
                     .use {
                         if (!it.isSuccessful) return@retry null
                         NodeMeta(AppJson.parseToJsonElement(it.body!!.string()).jsonArray.size, DEFAULT_VOICE, ApiVersion.V1)
@@ -99,8 +104,9 @@ class TtsApiClient {
         }
 
         // 老版：/voices 部分部署极慢（实测挂起），短超时拉取，失败不影响健康
+        val legacyVoicesUrl = authUrl("$base/voices", apiKey) ?: return NodeMeta(0, DEFAULT_VOICE, ApiVersion.LEGACY)
         val meta = retry(times = 2) {
-            shortHttp.newCall(Request.Builder().url("$base/voices").get().build()).await()
+            shortHttp.newCall(Request.Builder().url(legacyVoicesUrl).get().build()).await()
                 .use {
                     if (!it.isSuccessful) return@retry null
                     NodeMeta(AppJson.parseToJsonElement(it.body!!.string()).jsonArray.size, DEFAULT_VOICE, ApiVersion.LEGACY)
@@ -219,4 +225,11 @@ class TtsApiClient {
         const val DEFAULT_VOICE = "zh-CN-XiaoxiaoNeural"
         private const val SYNTH_RETRIES = 3
     }
+}
+
+/** 解析端点并仅在提供 Key 时附加认证参数（供探测等无 keyless 判定的调用使用）。 */
+internal fun authUrl(url: String, apiKey: String?): okhttp3.HttpUrl? {
+    val parsed = url.toHttpUrlOrNull() ?: return null
+    if (apiKey.isNullOrBlank()) return parsed
+    return parsed.newBuilder().addQueryParameter("api_key", apiKey).build()
 }
