@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.ui.util.Labels
+import com.example.ttsaggregator.ui.util.voiceLabel
 
 /** 顶部快捷筛选：常用 → 全部 → 中文 → 英语 → 其余语言，按可用宽度动态排布。 */
 @Composable
@@ -177,6 +178,7 @@ internal fun LanguageGrid(
 @Composable
 internal fun VoicePickerRow(
     voice: Voice,
+    label: String,
     isCurrent: Boolean,
     expanded: Boolean,
     currentStyle: String,
@@ -246,7 +248,7 @@ internal fun VoicePickerRow(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        voice.displayName,
+                        label,
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

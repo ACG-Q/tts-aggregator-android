@@ -51,6 +51,7 @@ import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRefreshResult
 import com.example.ttsaggregator.ui.appViewModel
 import com.example.ttsaggregator.ui.util.Labels
+import com.example.ttsaggregator.ui.util.voiceLabel
 import com.example.ttsaggregator.viewmodel.VoiceViewModel
 
 /**
@@ -116,9 +117,9 @@ fun VoicePickerSheet(
         onApplied(
             buildString {
                 append("已选择：")
-                append(voice.displayName)
+                append(voiceLabel(voices, voice))
                 if (!style.isNullOrBlank()) {
-                    append(" · ")
+                    append("·")
                     append(Labels.style(style))
                 }
             },
@@ -415,6 +416,7 @@ fun VoicePickerSheet(
                                 items(content, key = { "frequent-${it.id}" }) { voice ->
                                     VoicePickerRow(
                                         voice = voice,
+                                        label = voiceLabel(voices, voice),
                                         isCurrent = voice.id == settings.voice,
                                         expanded = expandedId == voice.id,
                                         currentStyle = settings.style,
@@ -435,6 +437,7 @@ fun VoicePickerSheet(
                                 items(recentVoices, key = { "recent-${it.id}" }) { voice ->
                                     VoicePickerRow(
                                         voice = voice,
+                                        label = voiceLabel(voices, voice),
                                         isCurrent = voice.id == settings.voice,
                                         expanded = expandedId == voice.id,
                                         currentStyle = settings.style,
@@ -450,6 +453,7 @@ fun VoicePickerSheet(
                                 items(list, key = { "voice-${it.id}" }) { voice ->
                                     VoicePickerRow(
                                         voice = voice,
+                                        label = voiceLabel(voices, voice),
                                         isCurrent = voice.id == settings.voice,
                                         expanded = expandedId == voice.id,
                                         currentStyle = settings.style,
