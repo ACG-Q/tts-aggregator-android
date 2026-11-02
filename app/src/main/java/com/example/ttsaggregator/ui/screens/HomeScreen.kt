@@ -185,8 +185,15 @@ fun HomeScreen(
                 ),
                 shadowElevation = 0.dp,
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Box(modifier = Modifier.heightIn(min = 112.dp)) {
+                Column(
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        top = 16.dp,
+                        end = 16.dp,
+                        bottom = 12.dp,
+                    ),
+                ) {
+                    Box(modifier = Modifier.heightIn(min = 122.dp)) {
                         if (text.isBlank()) {
                             Text(
                                 "粘贴一篇文章，或在这里写下想听的内容…",
@@ -207,7 +214,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(6.dp))
                     Box(
                         Modifier
                             .fillMaxWidth()
@@ -217,7 +224,7 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 6.dp),
+                            .padding(top = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
