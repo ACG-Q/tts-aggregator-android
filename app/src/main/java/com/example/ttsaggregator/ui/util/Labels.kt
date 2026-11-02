@@ -94,7 +94,7 @@ object Labels {
         "calm" to "平静", "depressed" to "低沉", "sports-commentary" to "体育解说",
         "fearful" to "恐惧", "happy" to "快乐", "jealous" to "嫉妒",
         "newscast-formal" to "正式新闻", "affectionate" to "深情", "envious" to "羡慕",
-        "cheerful" to "愉快", "confused" to "困惑", "excited" to "兴奋",
+        "cheerful" to "愉悦", "confused" to "困惑", "excited" to "兴奋",
         "tired" to "疲惫", "geomancer" to "风水师", "documentary-narration" to "纪录片旁白",
         "nervous" to "紧张", "newscast-casual" to "轻松新闻", "curious" to "好奇",
         "comforting" to "安慰", "cavalier" to "豪迈", "lyrical" to "抒情",
