@@ -206,7 +206,7 @@ fun SettingsScreen(
                     subtitle = "点击选择音色与风格",
                     icon = Icons.AutoMirrored.Rounded.VolumeUp,
                     value = if (synth.voice.isBlank()) "节点默认"
-                    else voiceList.find { it.id == synth.voice }?.displayName ?: synth.voice,
+                    else voiceDisplayName(voiceList, synth.voice, synth.style),
                     onClick = onOpenVoice,
                 )
                 SettingDivider()

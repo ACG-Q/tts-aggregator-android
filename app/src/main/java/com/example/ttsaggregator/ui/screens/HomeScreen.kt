@@ -293,7 +293,7 @@ fun HomeScreen(
             ) {
                 SelectorChip(
                     icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                    label = voiceDisplayName(voices, settings.voice),
+                    label = voiceDisplayName(voices, settings.voice, settings.style),
                     onClick = onOpenVoice,
                 )
                 SelectorChip(
