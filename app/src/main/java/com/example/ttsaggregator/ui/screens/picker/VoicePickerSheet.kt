@@ -44,8 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -157,10 +155,7 @@ fun VoicePickerSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "选择声音",
-                        fontSize = 19.sp,
-                        lineHeight = 24.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.25).sp,
+                        style = MaterialTheme.typography.titleLarge,
                     )
                     Text(
                         if (voices.isEmpty()) {
@@ -168,8 +163,7 @@ fun VoicePickerSheet(
                         } else {
                             "${voices.size} 个内置声音 · 离线可用"
                         },
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 3.dp),
                     )
@@ -238,17 +232,14 @@ fun VoicePickerSheet(
                         if (query.isEmpty()) {
                             Text(
                                 "搜索声音、语言或地区",
-                                fontSize = 13.5.sp,
-                                lineHeight = 18.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         BasicTextField(
                             value = query,
                             onValueChange = { query = it },
-                            textStyle = TextStyle(
-                                fontSize = 13.5.sp,
-                                lineHeight = 18.sp,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
                             ),
                             singleLine = true,
@@ -286,17 +277,13 @@ fun VoicePickerSheet(
                 ) {
                     Text(
                         "全部语言",
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
                         "返回",
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -349,8 +336,7 @@ fun VoicePickerSheet(
                         ) {
                             Text(
                                 "暂无声音数据，点右上角更新",
-                                fontSize = 12.5.sp,
-                                lineHeight = 18.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -365,15 +351,12 @@ fun VoicePickerSheet(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     "没有匹配的声音",
-                                    fontSize = 12.5.sp,
-                                    lineHeight = 18.sp,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
                                     if (query.isNotBlank()) "清除搜索" else "回到中文",
-                                    fontSize = 12.sp,
-                                    lineHeight = 16.sp,
-                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier
                                         .padding(top = 6.dp)
@@ -408,15 +391,13 @@ fun VoicePickerSheet(
                                     ) {
                                         Text(
                                             "${content.size} 个声音 · 中文优先",
-                                            fontSize = 10.5.sp,
-                                            lineHeight = 14.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.weight(1f),
                                         )
                                         Text(
                                             "点击即应用",
-                                            fontSize = 10.5.sp,
-                                            lineHeight = 14.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
@@ -491,8 +472,7 @@ fun VoicePickerSheet(
             ) {
                 Text(
                     "默认中文置顶；知道名字就直接搜",
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
@@ -508,9 +488,7 @@ fun VoicePickerSheet(
                 ) {
                     Text(
                         "恢复默认",
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -524,16 +502,13 @@ fun VoicePickerSheet(
             title = {
                 Text(
                     "删除最近使用记录？",
-                    fontSize = 16.sp,
-                    lineHeight = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
                 )
             },
             text = {
                 Text(
                     "删除后将不再显示最近使用的音色，此操作不可撤销。",
-                    fontSize = 13.sp,
-                    lineHeight = 19.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
@@ -551,8 +526,7 @@ fun VoicePickerSheet(
                 ) {
                     Text(
                         "删除",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -561,8 +535,7 @@ fun VoicePickerSheet(
                 TextButton(onClick = { clearRecentsConfirm = false }) {
                     Text(
                         "取消",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -599,27 +572,20 @@ private fun SectionHeader(
     ) {
         Text(
             title,
-            fontSize = 10.5.sp,
-            lineHeight = 14.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp,
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.5.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.width(6.dp))
         Text(
             "$count",
-            fontSize = 10.5.sp,
-            lineHeight = 14.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.weight(1f))
             Text(
                 actionLabel,
-                fontSize = 10.5.sp,
-                lineHeight = 14.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))

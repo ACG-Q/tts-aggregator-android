@@ -40,20 +40,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.ui.util.Labels
-
-private val chipTextStyle = TextStyle(
-    fontSize = 11.5.sp,
-    lineHeight = 16.sp,
-    fontWeight = FontWeight.SemiBold,
-)
 
 /** 顶部快捷筛选：常用 → 全部 → 中文 → 英语 → 其余语言，按可用宽度动态排布。 */
 @Composable
@@ -64,6 +55,7 @@ internal fun VoiceFilterChips(
     onMoreLanguages: () -> Unit,
 ) {
     val entries = remember(languages) { chipEntries(languages) }
+    val chipStyle = MaterialTheme.typography.labelMedium
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     BoxWithConstraints(
@@ -75,9 +67,9 @@ internal fun VoiceFilterChips(
         val spacing = with(density) { 7.dp.toPx() }
         val horizontalPadding = with(density) { 24.dp.toPx() }
         val widths = entries.map {
-            measurer.measure(it.label, chipTextStyle).size.width + horizontalPadding
+            measurer.measure(it.label, chipStyle).size.width + horizontalPadding
         }
-        val moreWidth = measurer.measure("更多", chipTextStyle).size.width + horizontalPadding
+        val moreWidth = measurer.measure("更多", chipStyle).size.width + horizontalPadding
         val plan = remember(widths, constraints.maxWidth, spacing, moreWidth) {
             planChips(widths, constraints.maxWidth.toFloat(), spacing, moreWidth)
         }
@@ -122,7 +114,7 @@ private fun PickerChip(text: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             text,
-            style = chipTextStyle,
+            style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
         )
     }
@@ -166,16 +158,13 @@ internal fun LanguageGrid(
                 Column(Modifier.padding(horizontal = 10.dp, vertical = 9.dp)) {
                     Text(
                         Labels.lang(code),
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         "$count 个",
-                        fontSize = 10.sp,
-                        lineHeight = 13.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -245,9 +234,7 @@ internal fun VoicePickerRow(
             ) {
                 Text(
                     voice.displayName.take(1).ifBlank { "声" },
-                    fontSize = 15.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleMedium,
                     color = if (avatarActive) {
                         MaterialTheme.colorScheme.onPrimary
                     } else {
@@ -260,9 +247,7 @@ internal fun VoicePickerRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         voice.displayName,
-                        fontSize = 13.5.sp,
-                        lineHeight = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
@@ -286,8 +271,7 @@ internal fun VoicePickerRow(
                 }
                 Text(
                     voiceMeta(voice),
-                    fontSize = 10.8.sp,
-                    lineHeight = 14.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -345,8 +329,7 @@ private fun StylePanel(voice: Voice, selectedStyle: String, onPick: (String?) ->
     ) {
         Text(
             "先选一个情感风格，点一下立即应用。",
-            fontSize = 10.5.sp,
-            lineHeight = 14.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
         )
@@ -393,9 +376,7 @@ private fun StyleChip(text: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             text,
-            fontSize = 11.sp,
-            lineHeight = 15.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
         )
     }
@@ -405,9 +386,7 @@ private fun StyleChip(text: String, selected: Boolean, onClick: () -> Unit) {
 private fun Tag(text: String, color: Color, container: Color) {
     Text(
         text,
-        fontSize = 9.5.sp,
-        lineHeight = 12.sp,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.labelSmall,
         color = color,
         modifier = Modifier
             .background(container, RoundedCornerShape(6.dp))
