@@ -2,6 +2,7 @@ package com.example.ttsaggregator.ui.screens
 
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -251,7 +252,7 @@ fun SettingsScreen(
                     subtitle = "到时自动停止播放",
                     icon = Icons.Rounded.Bedtime,
                     value = sleepLabel(appSettings.sleepMinutes),
-                    onClick = { vm.stepSleep(1) },
+                    onClick = vm::cycleSleep,
                 )
             }
 
@@ -302,7 +303,7 @@ fun SettingsScreen(
             SettingsSection("数据") {
                 ValueSettingRow(
                     title = "导入节点",
-                    subtitle = "从 JSON 或文本清单恢复配置",
+                    subtitle = "JSON 含偏好设置，文本清单仅导入节点",
                     icon = Icons.Rounded.FileDownload,
                     value = if (importing) "导入中…" else "",
                     onClick = {
@@ -345,7 +346,7 @@ fun SettingsScreen(
                 SettingDivider()
                 SwitchSettingRow(
                     title = "减少动态效果",
-                    subtitle = "关闭页面过渡与脉动动画",
+                    subtitle = "关闭朗读页的脉动与缩放",
                     icon = Icons.Rounded.Animation,
                     checked = appSettings.reduceMotion,
                     onCheckedChange = { value -> vm.updateApp { it.copy(reduceMotion = value) } },
@@ -353,7 +354,7 @@ fun SettingsScreen(
                 SettingDivider()
                 SwitchSettingRow(
                     title = "触感反馈",
-                    subtitle = "长按与切换时轻微振动",
+                    subtitle = "长按节点时轻微振动",
                     icon = Icons.Rounded.Vibration,
                     checked = appSettings.haptics,
                     onCheckedChange = { value -> vm.updateApp { it.copy(haptics = value) } },
@@ -545,10 +546,22 @@ private fun modeLabel(mode: CallMode): String = when (mode) {
 private fun sleepLabel(minutes: Int): String =
     if (minutes <= 0) "关闭" else "$minutes 分钟"
 
+/**
+ * 打开系统「文字转语音」设置页。
+ *
+ * 平台没有公开的 TTS 设置 action 常量，只能按各家设置应用的约定依次尝试：
+ * AOSP/大多数定制 ROM 认 `com.android.settings.TTS_SETTINGS`，
+ * 兜底退到无障碍设置（TTS 入口在该页下）。
+ */
 private fun openSystemTtsSettings(context: Context, onToast: (String) -> Unit) {
-    runCatching {
-        context.startActivity(Intent("android.speech.tts.ACTION_SETTINGS"))
-    }.onFailure { onToast("无法打开 TTS 设置：${it.message}") }
+    val candidates = listOf(
+        Intent("com.android.settings.TTS_SETTINGS"),
+        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+    )
+    val opened = candidates.any { intent ->
+        runCatching { context.startActivity(intent) }.isSuccess
+    }
+    if (!opened) onToast("无法打开 TTS 设置，请在系统设置中搜索「文字转语音」")
 }
 
 internal fun Context.appVersion(): String = runCatching {

@@ -2,6 +2,7 @@ package com.example.ttsaggregator.viewmodel
 
 import com.example.ttsaggregator.data.AppSettingsOptions
 import com.example.ttsaggregator.data.CallMode
+import com.example.ttsaggregator.data.ThemeMode
 import com.example.ttsaggregator.playback.ReadTuning
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -43,5 +44,33 @@ class SettingsCyclesTest {
         assertEquals(CallMode.GROUP, CallMode.AUTO.nextMode())
         assertEquals(CallMode.MANUAL, CallMode.GROUP.nextMode())
         assertEquals(CallMode.AUTO, CallMode.MANUAL.nextMode())
+    }
+
+    @Test
+    fun theme_cycles_system_light_dark() {
+        assertEquals(ThemeMode.LIGHT, ThemeMode.SYSTEM.next())
+        assertEquals(ThemeMode.DARK, ThemeMode.LIGHT.next())
+        assertEquals(ThemeMode.SYSTEM, ThemeMode.DARK.next())
+    }
+
+    @Test
+    fun sleep_steps_from_off_to_first_slot_and_clamps() {
+        assertEquals(15, stepOption(0, AppSettingsOptions.SLEEP_MINUTES, 1))
+        assertEquals(0, stepOption(0, AppSettingsOptions.SLEEP_MINUTES, -1))
+        assertEquals(60, stepOption(60, AppSettingsOptions.SLEEP_MINUTES, 1))
+    }
+
+    @Test
+    fun sleep_cycle_wraps_back_to_off() {
+        assertEquals(15, cycleOption(0, AppSettingsOptions.SLEEP_MINUTES))
+        assertEquals(30, cycleOption(15, AppSettingsOptions.SLEEP_MINUTES))
+        assertEquals(60, cycleOption(30, AppSettingsOptions.SLEEP_MINUTES))
+        assertEquals(0, cycleOption(60, AppSettingsOptions.SLEEP_MINUTES))
+    }
+
+    @Test
+    fun cycleOption_unknown_value_starts_from_second() {
+        assertEquals(15, cycleOption(7, AppSettingsOptions.SLEEP_MINUTES))
+        assertEquals(42, cycleOption(42, emptyList<Int>()))
     }
 }
