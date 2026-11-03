@@ -33,7 +33,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -102,17 +101,16 @@ fun NodeDetailSheet(
     }
     val capability = if (node.voiceCount > 0) "$version · ${node.voiceCount} 音色" else version
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         ) {
             Text(
                 "节点详情",
@@ -257,10 +255,9 @@ fun AddNodeSheet(
         }
     }
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
@@ -268,7 +265,7 @@ fun AddNodeSheet(
                 .imePadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         ) {
             Text(
                 "添加节点",
@@ -277,7 +274,7 @@ fun AddNodeSheet(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "保存后会测试一次连接",
+                "保存后再测试连接",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -299,7 +296,7 @@ fun AddNodeSheet(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "密钥只保存在本机。保存后会测试一次连接。",
+                        "密钥只保存在本机。保存完成后自动测试连接。",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.5.sp,
                             lineHeight = 17.sp,
@@ -388,9 +385,9 @@ fun AddNodeSheet(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("正在测试连接…")
+                    Text("正在保存…")
                 } else {
-                    Text("保存并测试")
+                    Text("保存节点")
                 }
             }
         }
@@ -411,10 +408,9 @@ fun EditNodeSheet(
     var error by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
@@ -422,7 +418,7 @@ fun EditNodeSheet(
                 .imePadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         ) {
             Text(
                 "编辑节点",
@@ -520,10 +516,9 @@ fun BatchAddSheet(
         (raw.lines().count { it.isNotBlank() } - validCount).coerceAtLeast(0)
     }
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
@@ -531,7 +526,7 @@ fun BatchAddSheet(
                 .imePadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         ) {
             Text(
                 "批量添加",
@@ -633,16 +628,15 @@ fun GroupSelectSheet(
         selected = if (id in selected) selected - id else selected + id
     }
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         ) {
             Text(
                 "选择轮询节点",
@@ -842,15 +836,16 @@ private fun DetailRow(label: String, value: String, mono: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 9.dp),
+            .padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(92.dp),
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(12.dp))
         Text(
             value,
             style = if (mono) {
@@ -862,7 +857,7 @@ private fun DetailRow(label: String, value: String, mono: Boolean = false) {
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(2f, fill = false),
+            modifier = Modifier.weight(1f),
         )
     }
 }

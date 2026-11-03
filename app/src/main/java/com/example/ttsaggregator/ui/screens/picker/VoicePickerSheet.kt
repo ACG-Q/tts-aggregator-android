@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -27,7 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRefreshResult
 import com.example.ttsaggregator.ui.appViewModel
+import com.example.ttsaggregator.ui.components.AppBottomSheet
 import com.example.ttsaggregator.ui.components.AppTextField
 import com.example.ttsaggregator.ui.util.Labels
 import com.example.ttsaggregator.ui.util.voiceLabel
@@ -134,21 +133,20 @@ fun VoicePickerSheet(
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
+        fillContentHeight = true,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.88f)
                 .imePadding(),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 18.dp, end = 8.dp, top = 2.dp, bottom = 6.dp),
+                    .padding(start = 16.dp, end = 8.dp, top = 2.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.Top,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
