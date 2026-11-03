@@ -570,7 +570,7 @@ fun BatchAddSheet(
                 onSelect = { group = it },
             )
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(
                     checked = autoTest,
