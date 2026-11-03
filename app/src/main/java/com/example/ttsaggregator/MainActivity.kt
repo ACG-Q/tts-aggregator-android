@@ -2,6 +2,7 @@ package com.example.ttsaggregator
 
 import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,10 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.example.ttsaggregator.navigation.AppNav
 import com.example.ttsaggregator.playback.PlaybackController
 import com.example.ttsaggregator.ui.ProvideAppContainer
 import com.example.ttsaggregator.ui.theme.AppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * 宿主 Activity：只负责 Compose 容器、全局播放器与 Toast。
@@ -34,6 +38,7 @@ class MainActivity : ComponentActivity() {
         val container = (application as App).container
         playback = PlaybackController(applicationContext, container.settings)
         playback.restoreIfNeeded()
+        startLaunchProbeIfEnabled(container, isFreshLaunch = savedInstanceState == null)
 
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
@@ -74,5 +79,26 @@ class MainActivity : ComponentActivity() {
         runOnUiThread {
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * 「启动时自动测试」开关：冷启动后在后台刷新一次节点健康。
+     *
+     * 只在 [isFreshLaunch] 为 true（非旋转/重建）时执行，避免每次重建都打一遍网络。
+     */
+    private fun startLaunchProbeIfEnabled(container: AppContainer, isFreshLaunch: Boolean) {
+        if (!isFreshLaunch) return
+        if (!container.settings.appSettings.value.autoTestOnLaunch) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            container.nodeRepository.awaitReady()
+            val ids = container.nodeRepository.nodes.value.map { it.id }
+            if (ids.isEmpty()) return@launch
+            runCatching { container.nodeRepository.probeAll(ids) }
+                .onFailure { Log.w(TAG, "launch probe failed", it) }
+        }
+    }
+
+    private companion object {
+        const val TAG = "TTS-Agg"
     }
 }

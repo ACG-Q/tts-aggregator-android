@@ -11,7 +11,7 @@ import com.example.ttsaggregator.data.NodeRepository
 import com.example.ttsaggregator.data.SettingsStore
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRepository
-import com.example.ttsaggregator.data.parseNodeImport
+import com.example.ttsaggregator.data.parseNodeBundle
 import com.example.ttsaggregator.playback.ReadTuning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,8 +64,12 @@ class SettingsViewModel(
         it.copy(failThreshold = stepOption(it.failThreshold, AppSettingsOptions.FAIL_THRESHOLDS, delta))
     }
 
-    fun stepSleep(delta: Int) = updateApp {
-        it.copy(sleepMinutes = stepOption(it.sleepMinutes, AppSettingsOptions.SLEEP_MINUTES, delta))
+    /**
+     * 睡眠定时是「点一下换一个档位」的循环控件，必须能回到「关闭」。
+     * 用 [cycleOption] 而不是 [stepOption]：后者到 60 分钟就夹死，关闭档位再也点不回来。
+     */
+    fun cycleSleep() = updateApp {
+        it.copy(sleepMinutes = cycleOption(it.sleepMinutes, AppSettingsOptions.SLEEP_MINUTES))
     }
 
     fun cycleMode() = settings.updatePoolConfig { it.copy(mode = it.mode.nextMode()) }
@@ -79,7 +83,8 @@ class SettingsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _importing.value = true
             val message = try {
-                val drafts = parseNodeImport(raw)
+                val bundle = parseNodeBundle(raw)
+                val drafts = bundle.drafts
                 if (drafts.isEmpty()) {
                     "没有可导入的有效节点"
                 } else {
@@ -87,7 +92,12 @@ class SettingsViewModel(
                     val unique = drafts.distinctBy { it.url.trimEnd('/') }
                     val added = unique.count { it.url.trimEnd('/') !in existingUrls }
                     repo.saveRawBatch(unique)
-                    "导入完成：新增 $added 个，共 ${unique.size} 个"
+                    val restored = bundle.settings?.let { imported ->
+                        settings.saveAppSettings(imported)
+                        true
+                    } ?: false
+                    "导入完成：新增 $added 个，共 ${unique.size} 个" +
+                        if (restored) "，已恢复偏好设置" else ""
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "importNodes failed", e)
@@ -109,6 +119,13 @@ internal fun <T> stepOption(current: T, options: List<T>, delta: Int): T {
     if (options.isEmpty()) return current
     val index = options.indexOf(current).takeIf { it >= 0 } ?: 0
     return options[(index + delta).coerceIn(0, options.lastIndex)]
+}
+
+/** 在固定选项集中向下循环；用于「点一下切下一档」且必须能回到首档的控件。 */
+internal fun <T> cycleOption(current: T, options: List<T>): T {
+    if (options.isEmpty()) return current
+    val index = options.indexOf(current).takeIf { it >= 0 } ?: 0
+    return options[(index + 1) % options.size]
 }
 
 internal fun CallMode.nextMode(): CallMode = when (this) {

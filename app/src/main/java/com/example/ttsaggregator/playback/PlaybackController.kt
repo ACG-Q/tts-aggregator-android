@@ -13,6 +13,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -58,6 +60,16 @@ class PlaybackController(
 
     private val resumeEnabled: Boolean
         get() = settings.appSettings.value.resume
+
+    init {
+        // 播放中修改「睡眠定时」需要立刻重设计时器，否则只有下一次播放才生效。
+        scope.launch {
+            settings.appSettings
+                .map { it.sleepMinutes }
+                .distinctUntilChanged()
+                .collect { minutes -> if (_state.value.isActive) setSleepTimer(minutes) }
+        }
+    }
 
     fun play(bytes: ByteArray, title: String, text: String, speed: Float = 1f) {
         loadJob?.cancel()

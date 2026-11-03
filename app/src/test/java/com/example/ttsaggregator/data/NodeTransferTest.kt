@@ -2,6 +2,7 @@ package com.example.ttsaggregator.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,5 +61,44 @@ class NodeTransferTest {
         assertEquals("https://a", drafts[0].url)
         assertEquals("东京", drafts[0].label)
         assertEquals("备用", drafts[0].group)
+    }
+
+    @Test
+    fun `导入 JSON 时带回偏好设置`() {
+        val json = exportNodesJson(
+            nodes = listOf(TtsNode(baseUrl = "https://a")),
+            config = AppSettings(
+                theme = ThemeMode.DARK,
+                cooldownMinutes = 30,
+                failThreshold = 5,
+                sleepMinutes = 15,
+            ),
+            exportedAt = "2026-10-27T00:00:00Z",
+        )
+
+        val bundle = parseNodeBundle(json)
+
+        assertEquals(1, bundle.drafts.size)
+        val restored = requireNotNull(bundle.settings)
+        assertEquals(ThemeMode.DARK, restored.theme)
+        assertEquals(30, restored.cooldownMinutes)
+        assertEquals(5, restored.failThreshold)
+        assertEquals(15, restored.sleepMinutes)
+    }
+
+    @Test
+    fun `导入纯文本清单不覆盖偏好设置`() {
+        val bundle = parseNodeBundle("https://a|东京|默认")
+
+        assertEquals(1, bundle.drafts.size)
+        assertNull(bundle.settings)
+    }
+
+    @Test
+    fun `导入非法 JSON 返回空结果且不还原设置`() {
+        val bundle = parseNodeBundle("{\"nodes\": 1}")
+
+        assertTrue(bundle.drafts.isEmpty())
+        assertNull(bundle.settings)
     }
 }
