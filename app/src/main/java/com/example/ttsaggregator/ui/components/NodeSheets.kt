@@ -112,7 +112,7 @@ fun NodeDetailSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
         ) {
             Text(
                 "节点详情",
@@ -125,7 +125,7 @@ fun NodeDetailSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HealthTile(state = state, size = 44, corner = 13, iconSize = 22)
@@ -149,7 +149,7 @@ fun NodeDetailSheet(
                 NodeBadge(badge)
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
@@ -173,7 +173,7 @@ fun NodeDetailSheet(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DetailAction(
                     label = if (testing) "测试中…" else "测试连接",
@@ -268,7 +268,7 @@ fun AddNodeSheet(
                 .imePadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
         ) {
             Text(
                 "添加节点",
@@ -281,7 +281,7 @@ fun AddNodeSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -309,7 +309,7 @@ fun AddNodeSheet(
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("名称")
             AppTextField(
                 value = label,
@@ -323,7 +323,7 @@ fun AddNodeSheet(
                 enabled = !adding,
             )
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("接口地址")
             AppTextField(
                 value = url,
@@ -340,7 +340,7 @@ fun AddNodeSheet(
             Spacer(Modifier.height(5.dp))
             HelperText("支持 OpenAI 兼容的 /audio/speech 接口")
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("API Key")
             AppTextField(
                 value = apiKey,
@@ -354,7 +354,7 @@ fun AddNodeSheet(
             Spacer(Modifier.height(5.dp))
             HelperText("留空则使用无鉴权请求")
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("分组")
             GroupSelector(
                 groups = groups,
@@ -372,7 +372,7 @@ fun AddNodeSheet(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
             Button(
                 onClick = { submit() },
                 modifier = Modifier
@@ -422,7 +422,7 @@ fun EditNodeSheet(
                 .imePadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
         ) {
             Text(
                 "编辑节点",
@@ -437,7 +437,7 @@ fun EditNodeSheet(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("名称")
             AppTextField(
                 value = label,
@@ -448,7 +448,7 @@ fun EditNodeSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("API Key")
             AppTextField(
                 value = apiKey,
@@ -463,7 +463,7 @@ fun EditNodeSheet(
                 if (node.apiKey.isNullOrBlank()) "留空则使用无鉴权请求" else "清空将删除已保存的 Key",
             )
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("分组")
             GroupSelector(
                 groups = groups,
@@ -481,7 +481,7 @@ fun EditNodeSheet(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
             Button(
                 onClick = {
                     if (label.isBlank()) error = "给节点起个名字"
@@ -531,7 +531,7 @@ fun BatchAddSheet(
                 .imePadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
         ) {
             Text(
                 "批量添加",
@@ -545,7 +545,7 @@ fun BatchAddSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             AppTextField(
                 value = raw,
                 onValueChange = { raw = it },
@@ -558,7 +558,7 @@ fun BatchAddSheet(
                 textStyle = MonoTextStyle.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 enabled = !adding,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 "有效 $validCount · 重复 $duplicateCount · 无效 $invalidCount",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
@@ -566,7 +566,7 @@ fun BatchAddSheet(
                 else MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             FieldLabel("分组")
             GroupSelector(
                 groups = groups,
@@ -575,7 +575,7 @@ fun BatchAddSheet(
                 onSelect = { group = it },
             )
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(
                     checked = autoTest,
@@ -590,7 +590,7 @@ fun BatchAddSheet(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
             Button(
                 onClick = { onImport(raw, group, autoTest) },
                 modifier = Modifier
@@ -642,7 +642,7 @@ fun GroupSelectSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
         ) {
             Text(
                 "选择轮询节点",
@@ -744,7 +744,7 @@ fun GroupSelectSheet(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = { onSave(selected) },
                 modifier = Modifier
