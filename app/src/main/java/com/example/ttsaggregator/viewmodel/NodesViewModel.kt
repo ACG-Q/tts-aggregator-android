@@ -90,7 +90,10 @@ class NodesViewModel(
         }
     }
 
-    /** 保存节点并立即探测；探测失败也保留节点，便于后续编辑重试。 */
+    /**
+     * 先保存节点，保存成功立即回调，弹层随即关闭；随后在后台探测连接，
+     * 探测结果再通过 [onDone] 回调一次（失败也保留节点，便于后续重试）。
+     */
     fun addNode(
         url: String,
         label: String,
@@ -101,11 +104,12 @@ class NodesViewModel(
         if (_adding.value) return
         viewModelScope.launch(Dispatchers.IO) {
             _adding.value = true
-            var message = "保存失败"
+            var savedId: String? = null
+            var saveMessage = "保存失败"
             try {
                 val trimmed = url.trim().removeSuffix("/")
                 if (!Regex("^https?://.+", RegexOption.IGNORE_CASE).matches(trimmed)) {
-                    message = "URL 无效（需以 http(s) 开头）"
+                    saveMessage = "URL 无效（需以 http(s) 开头）"
                 } else {
                     val node = repo.saveRaw(
                         baseUrl = trimmed,
@@ -113,20 +117,30 @@ class NodesViewModel(
                         apiKey = apiKey?.trim()?.ifEmpty { null },
                         group = group,
                     )
-                    repo.probeAndUpdate(node.id)
-                    message = when (repo.get(node.id)?.health) {
-                        TtsNode.Health.OK -> "节点已保存，连接正常"
-                        TtsNode.Health.FAIL -> "节点已保存，但连接测试失败"
-                        else -> "节点已保存"
-                    }
+                    savedId = node.id
+                    saveMessage = "节点已保存，正在测试连接…"
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "addNode failed", e)
-                message = "保存失败：${e.message ?: "未知错误"}"
+                saveMessage = "保存失败：${e.message ?: "未知错误"}"
             } finally {
                 _adding.value = false
             }
-            withContext(Dispatchers.Main) { onDone(message) }
+            withContext(Dispatchers.Main) { onDone(saveMessage) }
+
+            val id = savedId ?: return@launch
+            val testMessage = try {
+                repo.probeAndUpdate(id)
+                when (repo.get(id)?.health) {
+                    TtsNode.Health.OK -> "连接正常"
+                    TtsNode.Health.FAIL -> "连接测试失败，节点已保留"
+                    else -> "节点已保存"
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "addNode probe failed", e)
+                "连接测试失败，节点已保留"
+            }
+            withContext(Dispatchers.Main) { onDone(testMessage) }
         }
     }
 
