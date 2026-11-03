@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -312,37 +311,29 @@ fun AddNodeSheet(
 
             Spacer(Modifier.height(18.dp))
             FieldLabel("名称")
-            OutlinedTextField(
+            AppTextField(
                 value = label,
                 onValueChange = {
                     label = it
                     error = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text("例如：东京 · 主节点", style = MaterialTheme.typography.bodySmall)
-                },
+                placeholder = "例如：东京 · 主节点",
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                shape = RoundedCornerShape(12.dp),
                 enabled = !adding,
             )
 
             Spacer(Modifier.height(14.dp))
             FieldLabel("接口地址")
-            OutlinedTextField(
+            AppTextField(
                 value = url,
                 onValueChange = {
                     url = it
                     error = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text("https://tts.example.com/v1", style = MaterialTheme.typography.bodySmall)
-                },
+                placeholder = "https://tts.example.com/v1",
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                shape = RoundedCornerShape(12.dp),
                 enabled = !adding,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             )
@@ -351,14 +342,12 @@ fun AddNodeSheet(
 
             Spacer(Modifier.height(14.dp))
             FieldLabel("API Key")
-            OutlinedTextField(
+            AppTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("sk-...", style = MaterialTheme.typography.bodySmall) },
+                placeholder = "sk-...",
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                shape = RoundedCornerShape(12.dp),
                 enabled = !adding,
                 visualTransformation = PasswordVisualTransformation(),
             )
@@ -450,7 +439,7 @@ fun EditNodeSheet(
             )
             Spacer(Modifier.height(18.dp))
             FieldLabel("名称")
-            OutlinedTextField(
+            AppTextField(
                 value = label,
                 onValueChange = {
                     label = it
@@ -458,19 +447,15 @@ fun EditNodeSheet(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                shape = RoundedCornerShape(12.dp),
             )
             Spacer(Modifier.height(14.dp))
             FieldLabel("API Key")
-            OutlinedTextField(
+            AppTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("sk-...", style = MaterialTheme.typography.bodySmall) },
+                placeholder = "sk-...",
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                shape = RoundedCornerShape(12.dp),
                 visualTransformation = PasswordVisualTransformation(),
             )
             Spacer(Modifier.height(5.dp))
@@ -561,21 +546,16 @@ fun BatchAddSheet(
             )
 
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
+            AppTextField(
                 value = raw,
                 onValueChange = { raw = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(
-                        "https://tts.example.com/v1 | 东京 | 默认\n" +
-                            "https://backup.example.com/v1",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                },
-                textStyle = MonoTextStyle.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                placeholder = "https://tts.example.com/v1 | 东京 | 默认\n" +
+                    "https://backup.example.com/v1",
+                singleLine = false,
                 minLines = 6,
                 maxLines = 10,
-                shape = RoundedCornerShape(12.dp),
+                textStyle = MonoTextStyle.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 enabled = !adding,
             )
             Spacer(Modifier.height(6.dp))
