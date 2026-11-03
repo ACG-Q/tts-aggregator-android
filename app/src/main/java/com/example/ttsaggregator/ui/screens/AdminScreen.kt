@@ -37,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,6 +73,7 @@ import com.example.ttsaggregator.data.knownGroups
 import com.example.ttsaggregator.ui.LocalAppSettings
 import com.example.ttsaggregator.ui.appViewModel
 import com.example.ttsaggregator.ui.components.AddNodeSheet
+import com.example.ttsaggregator.ui.components.AppTextField
 import com.example.ttsaggregator.ui.components.BatchAddSheet
 import com.example.ttsaggregator.ui.components.BatchBar
 import com.example.ttsaggregator.ui.components.EditNodeSheet
@@ -662,17 +662,12 @@ private fun ToolRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
+        AppTextField(
             value = query,
             onValueChange = onQuery,
             modifier = Modifier.weight(1f),
+            placeholder = "搜索名称、URL 或分组",
             singleLine = true,
-            placeholder = {
-                Text(
-                    "搜索名称、URL 或分组",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            },
             leadingIcon = {
                 Icon(
                     Icons.Rounded.Search,
@@ -681,8 +676,6 @@ private fun ToolRow(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
-            textStyle = MaterialTheme.typography.bodyMedium,
-            shape = RoundedCornerShape(12.dp),
         )
         Surface(
             onClick = onSort,
@@ -692,7 +685,7 @@ private fun ToolRow(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(

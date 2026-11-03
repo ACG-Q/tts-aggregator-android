@@ -1,6 +1,5 @@
 package com.example.ttsaggregator.ui.screens.picker
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -43,13 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ttsaggregator.data.Voice
 import com.example.ttsaggregator.data.VoiceRefreshResult
 import com.example.ttsaggregator.ui.appViewModel
+import com.example.ttsaggregator.ui.components.AppTextField
 import com.example.ttsaggregator.ui.util.Labels
 import com.example.ttsaggregator.ui.util.voiceLabel
 import com.example.ttsaggregator.viewmodel.VoiceViewModel
@@ -209,48 +207,26 @@ fun VoicePickerSheet(
                 }
             }
 
-            Surface(
+            AppTextField(
+                value = query,
+                onValueChange = { query = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 10.dp),
-                shape = RoundedCornerShape(13.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                placeholder = "搜索声音、语言或地区",
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                leadingIcon = {
                     Icon(
                         Icons.Rounded.Search,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
-                    Spacer(Modifier.width(9.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (query.isEmpty()) {
-                            Text(
-                                "搜索声音、语言或地区",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        BasicTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                            ),
-                            singleLine = true,
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                },
+                trailingIcon = {
                     if (query.isNotEmpty()) {
-                        Spacer(Modifier.width(4.dp))
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
@@ -266,8 +242,8 @@ fun VoicePickerSheet(
                             )
                         }
                     }
-                }
-            }
+                },
+            )
 
             if (languageGridOpen) {
                 Row(
