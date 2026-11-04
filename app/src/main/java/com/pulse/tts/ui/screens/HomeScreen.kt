@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.pulse.tts.playback.PlaybackController
 import com.pulse.tts.playback.ReadTuning
 import com.pulse.tts.ui.appViewModel
-import com.pulse.tts.ui.components.PulseBrandMark
+import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseMainHeader
 import com.pulse.tts.ui.util.voiceDisplayName
 import com.pulse.tts.viewmodel.HomeViewModel
@@ -114,7 +114,7 @@ fun HomeScreen(
         PulseMainHeader(
             title = "Pulse",
             subtitle = "聚合朗读 · 让声音流动",
-            leading = { PulseBrandMark(size = 38) },
+            leading = { PulseIconTile(Icons.Rounded.GraphicEq, size = 38, shape = CircleShape) },
             actions = {
                 Row(
                     modifier = Modifier
