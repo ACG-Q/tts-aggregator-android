@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,7 +34,6 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Wifi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -44,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,15 +61,23 @@ import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseSubHeader
 import com.pulse.tts.ui.permissions.PermissionKey
 import com.pulse.tts.ui.permissions.PermissionState
+import com.pulse.tts.ui.permissions.firstPendingIndex
+import com.pulse.tts.ui.permissions.pendingCriticalCount
 import com.pulse.tts.ui.permissions.permissionBadgeText
 import com.pulse.tts.ui.theme.StatusColors
+import kotlinx.coroutines.launch
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun PermissionsScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val requesters = remember {
+        PermissionKey.entries.associateWith { BringIntoViewRequester() }
+    }
     var states by remember { mutableStateOf(readPermissionStates(context)) }
 
     fun refresh() {
@@ -80,12 +90,6 @@ fun PermissionsScreen(
     val batteryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { refresh() }
-    val fileLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        refresh()
-        onToast(if (uri != null) "已获得文件访问权限" else "未选择文件")
-    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -108,7 +112,16 @@ fun PermissionsScreen(
                     TextButton(onClick = {
                         val next = readPermissionStates(context)
                         states = next
-                        onToast(permissionBadgeText(next))
+                        val pending = pendingCriticalCount(next)
+                        if (pending == 0) {
+                            onToast("全部已就绪")
+                        } else {
+                            onToast("还有 $pending 项待处理")
+                            val key = firstPendingIndex(next)?.let { next[it].key }
+                            if (key != null) {
+                                scope.launch { requesters.getValue(key).bringIntoView() }
+                            }
+                        }
                     }) {
                         Text("一键检查", style = MaterialTheme.typography.labelLarge)
                     }
@@ -148,6 +161,7 @@ fun PermissionsScreen(
             states.forEach { state ->
                 PermissionCard(
                     state = state,
+                    modifier = Modifier.bringIntoViewRequester(requesters.getValue(state.key)),
                     onAction = {
                         when (state.key) {
                             PermissionKey.NOTIFY -> {
@@ -172,11 +186,10 @@ fun PermissionsScreen(
                                     )
                                 }
                             }
-                            PermissionKey.BACKGROUND,
-                            PermissionKey.NETWORK,
-                            -> openAppDetails(context, onToast)
+                            PermissionKey.BACKGROUND -> openAppDetails(context, onToast)
+                            PermissionKey.NETWORK -> openDataSaverSettings(context, onToast)
                             PermissionKey.TTS -> openTtsSettings(context, onToast)
-                            PermissionKey.FILES -> fileLauncher.launch(arrayOf("*/*"))
+                            PermissionKey.FILES -> Unit
                         }
                     },
                 )
@@ -205,13 +218,24 @@ fun PermissionsScreen(
 @Composable
 private fun PermissionCard(
     state: PermissionState,
+    modifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
-    AppCard {
+    val accent = when {
+        state.readOnly -> MaterialTheme.colorScheme.onSurfaceVariant
+        state.granted -> StatusColors.Ok
+        else -> MaterialTheme.colorScheme.tertiary
+    }
+    val badgeColor = when {
+        state.readOnly -> MaterialTheme.colorScheme.onSurfaceVariant
+        state.granted -> StatusColors.Ok
+        else -> MaterialTheme.colorScheme.error
+    }
+    AppCard(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PulseIconTile(
                 icon = state.key.icon(),
-                tint = if (state.granted) StatusColors.Ok else MaterialTheme.colorScheme.tertiary,
+                tint = accent,
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -223,24 +247,16 @@ private fun PermissionCard(
                 Spacer(Modifier.height(4.dp))
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = (if (state.granted) StatusColors.Ok
-                    else MaterialTheme.colorScheme.error).copy(alpha = 0.12f),
+                    color = badgeColor.copy(alpha = 0.12f),
                 ) {
                     Text(
                         state.statusText,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (state.granted) StatusColors.Ok
-                        else MaterialTheme.colorScheme.error,
+                        color = badgeColor,
                     )
                 }
             }
-            Icon(
-                imageVector = state.key.icon(),
-                contentDescription = null,
-                tint = if (state.granted) StatusColors.Ok else MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(16.dp),
-            )
         }
         Spacer(Modifier.height(8.dp))
         Text(
@@ -248,9 +264,14 @@ private fun PermissionCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onAction) {
-                Text(state.key.actionText(state.granted), style = MaterialTheme.typography.labelLarge)
+        if (!state.readOnly) {
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onAction) {
+                    Text(
+                        state.key.actionText(state.granted),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         }
     }
@@ -348,8 +369,9 @@ internal fun readPermissionStates(context: Context): List<PermissionState> {
         PermissionState(
             key = PermissionKey.FILES,
             granted = true,
-            statusText = "按需访问",
-            detail = "导入/导出通过系统文件选择器完成，无需存储权限。",
+            readOnly = true,
+            statusText = "无需授权",
+            detail = "导入/导出通过系统文件选择器完成，不申请存储权限。",
         ),
     )
 }
@@ -376,7 +398,37 @@ private fun openNotificationSettings(context: Context, onToast: (String) -> Unit
 }
 
 private fun openTtsSettings(context: Context, onToast: (String) -> Unit) {
-    runCatching {
-        context.startActivity(Intent("android.speech.tts.ACTION_SETTINGS"))
-    }.onFailure { onToast("无法打开 TTS 设置：${it.message}") }
+    val candidates = listOf(
+        Intent("com.android.settings.TTS_SETTINGS"),
+        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:${context.packageName}"),
+        ),
+    )
+    val opened = candidates.any { intent ->
+        runCatching {
+            context.startActivity(intent)
+            true
+        }.getOrDefault(false)
+    }
+    if (!opened) onToast("无法打开 TTS 设置，请在系统设置中搜索「文字转语音」")
+}
+
+private fun openDataSaverSettings(context: Context, onToast: (String) -> Unit) {
+    val candidates = listOf(
+        Intent("android.settings.DATA_SAVER_SETTINGS"),
+        Intent(Settings.ACTION_DATA_USAGE_SETTINGS),
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:${context.packageName}"),
+        ),
+    )
+    val opened = candidates.any { intent ->
+        runCatching {
+            context.startActivity(intent)
+            true
+        }.getOrDefault(false)
+    }
+    if (!opened) onToast("无法打开数据节省设置，请在系统设置中搜索「流量节省」")
 }
