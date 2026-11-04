@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +39,7 @@ import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.AppCard
 import com.pulse.tts.ui.components.EmptyState
 import com.pulse.tts.ui.components.PulseMainHeader
+import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.SelectChip
 import com.pulse.tts.ui.util.formatClock
 import com.pulse.tts.ui.util.formatLatency
@@ -65,7 +68,7 @@ fun LogsScreen(
         PulseMainHeader(
             title = "记录",
             subtitle = "最近 ${logs.size} 条调用 · 成功、失败与节点切换",
-            titleStyle = MaterialTheme.typography.headlineMedium,
+            leading = { PulseIconTile(Icons.Rounded.ReceiptLong, size = 38, shape = CircleShape) },
             actions = {
                 IconButton(onClick = {
                     vm.clearLogs()

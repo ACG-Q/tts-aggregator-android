@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Pause
@@ -99,7 +101,7 @@ import com.pulse.tts.ui.components.HealthTile
 import com.pulse.tts.ui.components.NodeBadge
 import com.pulse.tts.ui.components.NodeDetailSheet
 import com.pulse.tts.ui.components.NodeSelectBox
-import com.pulse.tts.ui.components.PulseBrandMark
+import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseMainHeader
 import com.pulse.tts.ui.theme.MonoTextStyle
 import com.pulse.tts.ui.theme.StatusColors
@@ -513,7 +515,7 @@ private fun NodesHeader(
     PulseMainHeader(
         title = "节点",
         subtitle = "$count 个已配置",
-        leading = { PulseBrandMark(size = 38) },
+        leading = { PulseIconTile(Icons.Rounded.Dns, size = 38, shape = CircleShape) },
         actions = {
             HeaderIcon(
                 icon = Icons.Rounded.Checklist,

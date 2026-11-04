@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -407,11 +408,12 @@ fun PulseIconTile(
     tint: Color = MaterialTheme.colorScheme.primary,
     background: Color = tint.copy(alpha = 0.12f),
     size: Int = 42,
+    shape: Shape? = null,
 ) {
     Box(
         modifier = modifier
             .size(size.dp)
-            .clip(RoundedCornerShape((size / 3).dp))
+            .clip(shape ?: RoundedCornerShape((size / 3).dp))
             .background(background),
         contentAlignment = Alignment.Center,
     ) {
