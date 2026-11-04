@@ -40,4 +40,35 @@ class PermissionsLogicTest {
 
         assertEquals("2 项待处理", permissionBadgeText(states))
     }
+
+    @Test
+    fun `只读项不参与待处理定位`() {
+        val states = listOf(
+            PermissionState(PermissionKey.FILES, granted = false, readOnly = true),
+            PermissionState(PermissionKey.NOTIFY, granted = false),
+        )
+
+        assertEquals(1, firstPendingIndex(states))
+    }
+
+    @Test
+    fun `全部关键权限就绪时没有待处理定位`() {
+        val states = listOf(
+            PermissionState(PermissionKey.NOTIFY, granted = true),
+            PermissionState(PermissionKey.BATTERY, granted = true),
+            PermissionState(PermissionKey.BACKGROUND, granted = true),
+        )
+
+        assertEquals(null, firstPendingIndex(states))
+    }
+
+    @Test
+    fun `多个待处理项时返回第一个`() {
+        val states = listOf(
+            PermissionState(PermissionKey.NOTIFY, granted = false),
+            PermissionState(PermissionKey.BATTERY, granted = false),
+        )
+
+        assertEquals(0, firstPendingIndex(states))
+    }
 }
