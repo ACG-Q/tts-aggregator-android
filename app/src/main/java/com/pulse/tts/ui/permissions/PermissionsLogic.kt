@@ -14,6 +14,7 @@ data class PermissionState(
     val granted: Boolean,
     val statusText: String = "",
     val detail: String = "",
+    val readOnly: Boolean = false,
 )
 
 private val CRITICAL = setOf(
@@ -23,7 +24,11 @@ private val CRITICAL = setOf(
 )
 
 fun pendingCriticalCount(states: List<PermissionState>): Int =
-    states.count { it.key in CRITICAL && !it.granted }
+    states.count { it.key in CRITICAL && !it.granted && !it.readOnly }
+
+fun firstPendingIndex(states: List<PermissionState>): Int? =
+    states.indexOfFirst { it.key in CRITICAL && !it.granted && !it.readOnly }
+        .takeIf { it >= 0 }
 
 fun permissionBadgeText(states: List<PermissionState>): String {
     val pending = pendingCriticalCount(states)
