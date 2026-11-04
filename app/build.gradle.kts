@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ttsaggregator"
+    namespace = "com.pulse.tts"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.ttsaggregator"
+        applicationId = "com.pulse.tts"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
