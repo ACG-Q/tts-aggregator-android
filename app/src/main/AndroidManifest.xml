@@ -27,6 +27,21 @@
             </intent-filter>
         </activity>
 
+        <!-- 系统设置「文字转语音输出」页的语音数据自检与试听 -->
+        <activity
+            android:name=".tts.TtsEngineSetupActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.CHECK_TTS_DATA" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.GET_SAMPLE_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- 系统 TTS 引擎（URL TTS） -->
         <service
             android:name=".tts.AggregatorTtsService"
@@ -34,10 +49,11 @@
             android:permission="android.permission.BIND_TEXT_TO_SPEECH"
             android:label="Pulse">
             <intent-filter>
-                <action android:name="android.speech.tts.engine.TTS_SERVICE" />
+                <action android:name="android.intent.action.TTS_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <meta-data
-                android:name="android.speech.tts.engine"
+                android:name="android.speech.tts"
                 android:resource="@xml/tts_engine" />
         </service>
 
