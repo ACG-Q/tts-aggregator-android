@@ -1,6 +1,9 @@
 package com.pulse.tts.ui.screens
 
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -38,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,15 +54,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.playback.PlaybackController
 import com.pulse.tts.playback.ReadTuning
+import com.pulse.tts.tts.AggregatorTtsService
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseMainHeader
+import com.pulse.tts.ui.theme.LocalGlass
+import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.util.EngineStatus
+import com.pulse.tts.ui.util.engineStatus
+import com.pulse.tts.ui.util.engineStatusLabel
 import com.pulse.tts.ui.util.voiceDisplayName
 import com.pulse.tts.viewmodel.HomeViewModel
+import kotlinx.coroutines.delay
 
 /**
  * 首页：朗读优先。输入→选声音语速→开始朗读；播放态由全屏声场承接。 */
@@ -67,6 +79,7 @@ fun HomeScreen(
     player: PlaybackController,
     onToast: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenPermissions: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenReader: () -> Unit,
 ) {
@@ -80,6 +93,14 @@ fun HomeScreen(
     var text by rememberSaveable { mutableStateOf("") }
     var showEmptyError by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    var engineState by remember { mutableStateOf(readEngineStatus(context)) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            engineState = readEngineStatus(context)
+            delay(2_000)
+        }
+    }
 
     val charCount = text.count { !it.isWhitespace() }
     val estimateSeconds = maxOf(10, (charCount / 4.2f).toInt())
@@ -116,25 +137,10 @@ fun HomeScreen(
             subtitle = "聚合朗读 · 让声音流动",
             leading = { PulseIconTile(Icons.Rounded.GraphicEq, size = 38, shape = CircleShape) },
             actions = {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier
-                            .size(6.dp)
-                            .background(MaterialTheme.colorScheme.secondary, CircleShape),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "服务运行中",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
+                EngineStatusPill(
+                    status = engineState,
+                    onClick = onOpenPermissions,
+                )
                 Spacer(Modifier.width(4.dp))
                 IconButton(onClick = onOpenSettings, modifier = Modifier.size(40.dp)) {
                     Icon(
@@ -463,3 +469,49 @@ private fun SelectorChip(
 
 private fun formatEstimate(seconds: Int): String =
     "%d:%02d".format(seconds / 60, seconds % 60)
+
+@Composable
+private fun EngineStatusPill(
+    status: EngineStatus,
+    onClick: () -> Unit,
+) {
+    val glass = LocalGlass.current
+    val accent = when (status) {
+        EngineStatus.ACTIVE -> StatusColors.Ok
+        EngineStatus.READY -> MaterialTheme.colorScheme.primary
+        EngineStatus.DISABLED -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val container = if (glass.enabled) {
+        glass.cardColor
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(container)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(6.dp)
+                .background(accent, CircleShape),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            engineStatusLabel(status),
+            style = MaterialTheme.typography.labelSmall,
+            color = accent,
+        )
+    }
+}
+
+private fun readEngineStatus(context: Context): EngineStatus {
+    val isDefault = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.TTS_DEFAULT_SYNTH,
+    ) == context.packageName
+    return engineStatus(isDefault, AggregatorTtsService.isRunning)
+}
