@@ -28,6 +28,7 @@ class AggregatorTtsService : TextToSpeechService() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         engine = TtsSynthesisEngine(
             scope = scope,
             synthesizeAudio = { text, prefs -> appContainer.nodePool.synthesize(text, prefs) },
@@ -71,6 +72,7 @@ class AggregatorTtsService : TextToSpeechService() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         scope.cancel()
         super.onDestroy()
     }
@@ -96,5 +98,11 @@ class AggregatorTtsService : TextToSpeechService() {
         override fun error() {
             callback.error(TextToSpeech.ERROR_SYNTHESIS)
         }
+    }
+
+    companion object {
+        @Volatile
+        var isRunning: Boolean = false
+            private set
     }
 }
