@@ -290,7 +290,7 @@ private fun PermissionKey.actionText(granted: Boolean): String = when (this) {
     PermissionKey.NOTIFY -> if (granted) "通知设置" else "授权通知"
     PermissionKey.BATTERY -> if (granted) "重新检查" else "去授权"
     PermissionKey.BACKGROUND -> "打开应用设置"
-    PermissionKey.NETWORK -> "打开应用设置"
+    PermissionKey.NETWORK -> "打开数据节省设置"
     PermissionKey.TTS -> "打开 TTS 设置"
     PermissionKey.FILES -> "验证文件访问"
 }
@@ -352,7 +352,7 @@ internal fun readPermissionStates(context: Context): List<PermissionState> {
             key = PermissionKey.BACKGROUND,
             granted = background,
             statusText = if (background) "允许后台活动" else "后台活动受限",
-            detail = "部分系统会限制后台网络与进程。",
+            detail = "部分系统会限制后台网络与进程；国产 ROM 可能还需在自启动管理中允许。",
         ),
         PermissionState(
             key = PermissionKey.NETWORK,
