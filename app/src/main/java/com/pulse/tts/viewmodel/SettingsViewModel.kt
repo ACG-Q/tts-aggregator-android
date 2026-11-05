@@ -46,6 +46,8 @@ class SettingsViewModel(
         settings.updateAppSettings(transform)
     }
 
+    fun cycleTheme() = updateApp { it.copy(theme = it.theme.next()) }
+
     fun stepRate(delta: Int) = settings.updateSynthSettings {
         it.copy(rate = stepOption(it.rate, ReadTuning.RATES, delta))
     }

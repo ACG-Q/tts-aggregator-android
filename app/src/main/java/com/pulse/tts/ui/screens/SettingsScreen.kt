@@ -5,7 +5,6 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,7 +22,6 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Bedtime
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.FileDownload
@@ -43,7 +40,6 @@ import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,7 +47,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -66,18 +61,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.ThemeMode
-import com.pulse.tts.data.UiStyle
 import com.pulse.tts.data.exportNodesJson
 import com.pulse.tts.playback.ReadTuning
 import com.pulse.tts.ui.appViewModel
-import com.pulse.tts.ui.components.AppBottomSheet
 import com.pulse.tts.ui.components.PulseSubHeader
 import com.pulse.tts.ui.components.SettingDivider
 import com.pulse.tts.ui.components.SettingGroup
@@ -91,7 +83,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -117,7 +108,6 @@ fun SettingsScreen(
 
     var showPrivacy by remember { mutableStateOf(false) }
     var showClearLogs by remember { mutableStateOf(false) }
-    var showAppearance by remember { mutableStateOf(false) }
     var permissionStates by remember { mutableStateOf(readPermissionStates(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -348,10 +338,10 @@ fun SettingsScreen(
                 SettingDivider()
                 ValueSettingRow(
                     title = "外观",
-                    subtitle = "主题与界面风格",
+                    subtitle = "跟随系统、浅色或深色",
                     icon = Icons.Rounded.Palette,
-                    value = "${themeLabel(appSettings.theme)} · ${styleLabel(appSettings.uiStyle)}",
-                    onClick = { showAppearance = true },
+                    value = themeLabel(appSettings.theme),
+                    onClick = vm::cycleTheme,
                 )
                 SettingDivider()
                 SwitchSettingRow(
@@ -430,21 +420,6 @@ fun SettingsScreen(
                 TextButton(onClick = { showClearLogs = false }) { Text("取消") }
             },
         )
-    }
-
-    if (showAppearance) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        AppBottomSheet(
-            onDismissRequest = { showAppearance = false },
-            sheetState = sheetState,
-        ) {
-            AppearanceSheetContent(
-                theme = appSettings.theme,
-                style = appSettings.uiStyle,
-                onTheme = { value -> vm.updateApp { it.copy(theme = value) } },
-                onStyle = { value -> vm.updateApp { it.copy(uiStyle = value) } },
-            )
-        }
     }
 }
 
@@ -554,101 +529,6 @@ private fun StepperSettingRow(
             }
         },
     )
-}
-
-@Composable
-private fun AppearanceSheetContent(
-    theme: ThemeMode,
-    style: UiStyle,
-    onTheme: (ThemeMode) -> Unit,
-    onStyle: (UiStyle) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 24.dp),
-    ) {
-        Text(
-            "外观",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "主题",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        SettingGroup {
-            OptionRows(
-                options = listOf(
-                    ThemeMode.SYSTEM to "跟随系统",
-                    ThemeMode.LIGHT to "浅色",
-                    ThemeMode.DARK to "深色",
-                ),
-                selected = theme,
-                onSelect = onTheme,
-            )
-        }
-        Spacer(Modifier.height(20.dp))
-        Text(
-            "风格",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        SettingGroup {
-            OptionRows(
-                options = listOf(
-                    UiStyle.STANDARD to "标准",
-                    UiStyle.LIQUID_GLASS to "液体玻璃",
-                ),
-                selected = style,
-                onSelect = onStyle,
-            )
-        }
-    }
-}
-
-@Composable
-private fun <T> OptionRows(
-    options: List<Pair<T, String>>,
-    selected: T,
-    onSelect: (T) -> Unit,
-) {
-    Column {
-        options.forEachIndexed { index, (value, label) ->
-            if (index > 0) SettingDivider()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(value) }
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                if (value == selected) {
-                    Icon(
-                        Icons.Rounded.Check,
-                        contentDescription = "已选择",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun styleLabel(style: UiStyle): String = when (style) {
-    UiStyle.STANDARD -> "标准"
-    UiStyle.LIQUID_GLASS -> "液体玻璃"
 }
 
 private fun themeLabel(mode: ThemeMode): String = when (mode) {

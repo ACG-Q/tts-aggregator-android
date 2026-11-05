@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.ApiVersion
 import com.pulse.tts.data.TtsNode
-import com.pulse.tts.ui.theme.LocalGlass
 import com.pulse.tts.ui.theme.StatusColors
 
 /**
@@ -62,18 +61,17 @@ fun AppCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(14.dp),
-    containerColor: Color = LocalGlass.current.cardColor,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
     bordered: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val glass = LocalGlass.current
     val cardModifier = modifier.fillMaxWidth()
     val shape = MaterialTheme.shapes.medium
     val colors = CardDefaults.cardColors(containerColor = containerColor)
-    val border = when {
-        bordered -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        glass.enabled -> BorderStroke(1.dp, glass.cardBorder)
-        else -> null
+    val border = if (bordered) {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    } else {
+        null
     }
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
 
