@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,7 +22,9 @@ import androidx.lifecycle.lifecycleScope
 import com.pulse.tts.navigation.AppNav
 import com.pulse.tts.playback.PlaybackController
 import com.pulse.tts.ui.ProvideAppContainer
+import com.pulse.tts.ui.components.GlassBackdrop
 import com.pulse.tts.ui.theme.AppTheme
+import com.pulse.tts.ui.theme.LocalGlass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -43,9 +46,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
             val darkTheme = appSettings.theme.isDark(isSystemInDarkTheme())
-            AppTheme(darkTheme = darkTheme) {
+            AppTheme(darkTheme = darkTheme, style = appSettings.uiStyle) {
                 val view = LocalView.current
-                val statusBarColor = MaterialTheme.colorScheme.background
+                val glass = LocalGlass.current
+                val statusBarColor = glass.backdropBase
                 SideEffect {
                     // XML 主题固定为浅色状态栏，应用内切换深色时需要同步，否则顶部留一条白带。
                     val window = (view.context as Activity).window
@@ -53,11 +57,16 @@ class MainActivity : ComponentActivity() {
                     WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
                 }
                 ProvideAppContainer(appSettings) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {
-                        AppNav(player = playback, onToast = ::toast)
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (glass.enabled) {
+                            GlassBackdrop(modifier = Modifier.matchParentSize())
+                        }
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            AppNav(player = playback, onToast = ::toast)
+                        }
                     }
                 }
             }
