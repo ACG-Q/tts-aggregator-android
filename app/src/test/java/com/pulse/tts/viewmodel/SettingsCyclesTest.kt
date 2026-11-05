@@ -1,8 +1,10 @@
 package com.pulse.tts.viewmodel
 
+import com.pulse.tts.data.AppSettings
 import com.pulse.tts.data.AppSettingsOptions
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.ThemeMode
+import com.pulse.tts.data.UiStyle
 import com.pulse.tts.playback.ReadTuning
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -72,5 +74,10 @@ class SettingsCyclesTest {
     fun cycleOption_unknown_value_starts_from_second() {
         assertEquals(15, cycleOption(7, AppSettingsOptions.SLEEP_MINUTES))
         assertEquals(42, cycleOption(42, emptyList<Int>()))
+    }
+
+    @Test
+    fun ui_style_defaults_to_standard() {
+        assertEquals(UiStyle.STANDARD, AppSettings().uiStyle)
     }
 }
