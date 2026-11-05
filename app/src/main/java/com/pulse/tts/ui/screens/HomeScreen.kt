@@ -63,7 +63,6 @@ import com.pulse.tts.tts.AggregatorTtsService
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseMainHeader
-import com.pulse.tts.ui.theme.LocalGlass
 import com.pulse.tts.ui.theme.StatusColors
 import com.pulse.tts.ui.util.EngineStatus
 import com.pulse.tts.ui.util.engineStatus
@@ -475,17 +474,12 @@ private fun EngineStatusPill(
     status: EngineStatus,
     onClick: () -> Unit,
 ) {
-    val glass = LocalGlass.current
     val accent = when (status) {
         EngineStatus.ACTIVE -> StatusColors.Ok
         EngineStatus.READY -> MaterialTheme.colorScheme.primary
         EngineStatus.DISABLED -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val container = if (glass.enabled) {
-        glass.cardColor
-    } else {
-        MaterialTheme.colorScheme.secondaryContainer
-    }
+    val container = MaterialTheme.colorScheme.secondaryContainer
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))

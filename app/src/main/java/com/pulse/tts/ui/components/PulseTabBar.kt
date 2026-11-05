@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.navigation.MainTab
-import com.pulse.tts.ui.theme.LocalGlass
 
 /** 贴底底部导航：朗读 / 节点 / 记录。 */
 @Composable
@@ -37,15 +36,14 @@ fun PulseTabBar(
     onSelect: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val glass = LocalGlass.current
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = glass.barColor,
+        color = MaterialTheme.colorScheme.surface,
     ) {
         Column {
             HorizontalDivider(
                 thickness = 1.dp,
-                color = if (glass.enabled) glass.cardBorder else MaterialTheme.colorScheme.outlineVariant,
+                color = MaterialTheme.colorScheme.outlineVariant,
             )
             Row(
                 modifier = Modifier
