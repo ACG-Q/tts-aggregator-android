@@ -74,6 +74,7 @@ fun AppNav(
                 player = player,
                 onToast = onToast,
                 onOpenSettings = nav::goSettings,
+                onOpenPermissions = nav::goPermissions,
                 onOpenVoice = { voicePickerVisible = true },
                 onOpenReader = { readerVisible = true },
             )
