@@ -18,8 +18,15 @@ enum class ThemeMode {
 }
 
 @Serializable
+enum class UiStyle {
+    STANDARD,
+    LIQUID_GLASS,
+}
+
+@Serializable
 data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
+    val uiStyle: UiStyle = UiStyle.STANDARD,
     val reduceMotion: Boolean = false,
     val haptics: Boolean = true,
     val backgroundPlay: Boolean = true,
