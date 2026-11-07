@@ -131,11 +131,11 @@ $env:JAVA_HOME = "C:\path\to\jdk-17"
 .\gradlew.bat :app:assembleDebug
 ```
 
-macOS / Linux（仓库暂未提供 `gradlew` 脚本，需本地安装 Gradle 8.7）：
+macOS / Linux：
 
 ```bash
 export JAVA_HOME=/path/to/jdk-17
-gradle :app:assembleDebug
+./gradlew :app:assembleDebug
 ```
 
 产物路径：`app/build/outputs/apk/debug/app-debug.apk`
@@ -157,8 +157,28 @@ Windows：
 macOS / Linux：
 
 ```bash
-gradle :app:testDebugUnitTest
+./gradlew :app:testDebugUnitTest
 ```
+
+### 发布版本（维护者）
+
+版本号只在 `app/build.gradle.kts` 的 `val appVersionName` 中维护，`versionCode` 自动推导。
+
+Windows：
+
+```powershell
+.\scripts\release.ps1 1.0.1
+```
+
+脚本会更新版本号、提交、打 `v1.0.1` 标签并推送。GitHub Actions 随后自动运行单元测试、构建签名 APK，并创建 GitHub Release。
+
+仅本地演练、不推送：
+
+```powershell
+.\scripts\release.ps1 1.0.1 -NoPush
+```
+
+发布所需密钥配置在仓库 Secrets 中：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
 
 ## 使用说明
 
@@ -228,4 +248,3 @@ app/src/main/java/com/pulse/tts/
 - 仅支持 Android 8.0 及以上版本
 - 系统 TTS 引擎的可用性受各厂商 ROM 的后台策略影响
 - 暂未提供 iOS / 桌面端
-- 仓库暂未包含 macOS / Linux 的 `gradlew` 脚本，需使用本地 Gradle
