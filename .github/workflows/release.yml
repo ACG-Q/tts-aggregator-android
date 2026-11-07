@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -80,20 +83,84 @@ jobs:
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "$APK"
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk "Pulse-v${{ steps.version.outputs.name }}.apk"
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/release/app-release.apk "Pulse-v${{ steps.version.outputs.name }}.apk"
+
+      - name: Generate release notes
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+          APK="Pulse-${TAG}.apk"
+          IFS=. read -r major minor patch <<< "$VERSION"
+          VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+          BYTES=$(stat -c%s "$APK")
+          SIZE=$(awk -v b="$BYTES" 'BEGIN { printf "%.1f MB", b / 1048576 }')
+          SHA=$(sha256sum "$APK" | awk '{print $1}')
+          sha256sum "$APK" > "${APK}.sha256"
+
+          TARGET=HEAD
+          if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
+            TARGET="${TAG}"
+          fi
+          PREV=$(git describe --tags --abbrev=0 --match "v[0-9]*" "${TARGET}^" 2>/dev/null || true)
+          if [ -n "$PREV" ]; then
+            COMMITS=$(git log --no-merges --pretty=format:"- %s" "${PREV}..${TARGET}" | grep -v '^- chore: 发布 ' || true)
+            LINK="**完整对比**：https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${TAG}"
+          else
+            COMMITS=$(git log --no-merges --pretty=format:"- %s" "${TARGET}" | grep -v '^- chore: 发布 ' || true)
+            LINK="**完整提交记录**：https://github.com/${GITHUB_REPOSITORY}/commits/${TAG}"
+          fi
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- 本次发布没有代码变更"
+          fi
+
+          {
+            echo "## Pulse ${TAG}"
+            echo
+            echo "Android 8.0+ · 已签名 APK"
+            echo
+            echo "### 更新内容"
+            echo
+            echo "$COMMITS"
+            echo
+            echo "### 下载"
+            echo
+            echo "| 文件 | 大小 | SHA-256 |"
+            echo "| --- | --- | --- |"
+            echo "| \`${APK}\` | ${SIZE} | \`${SHA}\` |"
+            echo
+            echo "### 版本信息"
+            echo
+            echo "- versionName：${VERSION}"
+            echo "- versionCode：${VERSION_CODE}"
+            echo "- 最低系统：Android 8.0（API 26）"
+            echo
+            echo "下载 APK 后，在系统设置中允许「安装未知来源应用」即可安装；已有版本可直接覆盖升级，无需卸载。"
+            echo
+            echo "$LINK"
+          } > release-notes.md
+
+          cat release-notes.md
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Pulse-v${{ steps.version.outputs.name }}
-          path: Pulse-v${{ steps.version.outputs.name }}.apk
+          path: |
+            Pulse-v${{ steps.version.outputs.name }}.apk
+            Pulse-v${{ steps.version.outputs.name }}.apk.sha256
           if-no-files-found: error
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: Pulse-v${{ steps.version.outputs.name }}.apk
+          files: |
+            Pulse-v${{ steps.version.outputs.name }}.apk
+            Pulse-v${{ steps.version.outputs.name }}.apk.sha256
           name: Pulse v${{ steps.version.outputs.name }}
-          generate_release_notes: true
+          body_path: release-notes.md
           fail_on_unmatched_files: true
