@@ -5,6 +5,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
 }
 
+val appVersionName = "1.0.0"
+
+fun versionCodeOf(version: String): Int {
+    val parts = version.split(".")
+    require(parts.size == 3) { "appVersionName 必须是 major.minor.patch 格式，例如 1.0.0" }
+    val (major, minor, patch) = parts.map { it.toInt() }
+    require(minor in 0..99 && patch in 0..99) { "minor 与 patch 必须小于 100" }
+    return major * 10_000 + minor * 100 + patch
+}
+
 android {
     namespace = "com.pulse.tts"
     compileSdk = 34
@@ -13,13 +23,32 @@ android {
         applicationId = "com.pulse.tts"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = versionCodeOf(appVersionName)
+        versionName = appVersionName
     }
 
     buildFeatures {
         compose = true
     }
+
+    signingConfigs {
+        val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+        if (!keystorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
