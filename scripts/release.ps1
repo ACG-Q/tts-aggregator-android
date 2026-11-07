@@ -50,13 +50,16 @@ try {
     }
 
     $updated = [regex]::new($pattern).Replace($content, "val appVersionName = `"$Version`"", 1)
-    [IO.File]::WriteAllText($gradleFile, $updated, [Text.UTF8Encoding]::new($false))
-
-    Write-Host "版本号已更新为 $Version，versionCode = $versionCode"
-    git --no-pager diff -- app/build.gradle.kts
-
-    git add app/build.gradle.kts
-    git commit -m "chore: 发布 $tag"
+    if ($updated -eq $content) {
+        Write-Host "版本号已经是 $Version，跳过版本提交（versionCode = $versionCode）"
+    }
+    else {
+        [IO.File]::WriteAllText($gradleFile, $updated, [Text.UTF8Encoding]::new($false))
+        Write-Host "版本号已更新为 $Version，versionCode = $versionCode"
+        git --no-pager diff -- app/build.gradle.kts
+        git add app/build.gradle.kts
+        git commit -m "chore: 发布 $tag"
+    }
     git tag -a $tag -m "Pulse $tag"
 
     if ($NoPush) {
