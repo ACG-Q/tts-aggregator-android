@@ -95,10 +95,13 @@ jobs:
         run: |
           set -euo pipefail
           TAG="v${VERSION}"
-          if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
-            TARGET="${TAG}"
+          git fetch --tags --force origin > /dev/null 2>&1 || true
+          if git rev-parse -q --verify "refs/tags/${TAG}^{commit}" > /dev/null; then
+            TARGET=$(git rev-parse "refs/tags/${TAG}^{commit}")
+            TAG_EXISTS=true
           else
-            TARGET=HEAD
+            TARGET=$(git rev-parse HEAD)
+            TAG_EXISTS=false
           fi
           ROOT=$(git rev-list --max-parents=0 "${TARGET}" | tail -n 1)
           PREV=$(git describe --tags --abbrev=0 --match "v[0-9]*" "${TARGET}^" 2>/dev/null || true)
@@ -139,6 +142,10 @@ jobs:
             echo "diff_base=${DIFF_BASE}"
             echo "ignore_tags=${IGNORE_TAGS}"
             echo "link=${LINK}"
+            echo "full=${FULL}"
+            echo "root=${ROOT}"
+            echo "head=$(git rev-parse HEAD)"
+            echo "tag_exists=${TAG_EXISTS}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Generate categorized changelog
@@ -155,6 +162,10 @@ jobs:
           LOG_RANGE: ${{ steps.meta.outputs.log_range }}
           DIFF_BASE: ${{ steps.meta.outputs.diff_base }}
           LINK: ${{ steps.meta.outputs.link }}
+          FULL: ${{ steps.meta.outputs.full }}
+          ROOT_SHA: ${{ steps.meta.outputs.root }}
+          HEAD_SHA: ${{ steps.meta.outputs.head }}
+          TAG_EXISTS: ${{ steps.meta.outputs.tag_exists }}
         run: |
           set -euo pipefail
           APK="Pulse-${TAG}.apk"
@@ -243,6 +254,18 @@ jobs:
             echo "下载 APK 后，在系统设置中允许「安装未知来源应用」即可安装；已有版本可直接覆盖升级，无需卸载。"
             echo
             echo "$LINK"
+            echo
+            echo "<details>"
+            echo "<summary>调试信息（临时）</summary>"
+            echo
+            echo "- HEAD：\`${HEAD_SHA}\`"
+            echo "- TARGET：\`${TARGET}\`"
+            echo "- DIFF_BASE：\`${DIFF_BASE}\`"
+            echo "- ROOT：\`${ROOT_SHA}\`"
+            echo "- FULL：\`${FULL}\`"
+            echo "- TAG_EXISTS：\`${TAG_EXISTS}\`"
+            echo
+            echo "</details>"
           } > release-notes.md
 
           cat release-notes.md
@@ -266,3 +289,13 @@ jobs:
           name: Pulse v${{ steps.version.outputs.name }}
           body_path: release-notes.md
           fail_on_unmatched_files: true
+
+      - name: Refresh release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --notes-file release-notes.md
+          echo "已刷新 ${TAG} 的 Release 正文"
