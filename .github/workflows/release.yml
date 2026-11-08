@@ -91,6 +91,7 @@ jobs:
         id: meta
         env:
           VERSION: ${{ steps.version.outputs.name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TAG="v${VERSION}"
@@ -99,31 +100,61 @@ jobs:
           else
             TARGET=HEAD
           fi
+          ROOT=$(git rev-list --max-parents=0 "${TARGET}" | tail -n 1)
           PREV=$(git describe --tags --abbrev=0 --match "v[0-9]*" "${TARGET}^" 2>/dev/null || true)
-          if [ -n "$PREV" ]; then
-            RANGE="${PREV}..${TARGET}"
-            echo "对比范围：${PREV} → ${TARGET}"
+
+          # 上一个 Release 不是分类格式（或没有上一个版本）时，用全量历史补齐
+          FULL=false
+          if [ -z "$PREV" ]; then
+            FULL=true
           else
-            RANGE="${TARGET}"
-            echo "对比范围：仓库起点 → ${TARGET}"
+            PREV_BODY=$(gh release view "$PREV" --json body --jq .body 2>/dev/null || true)
+            if ! printf '%s' "$PREV_BODY" | grep -q '### 更新内容'; then
+              FULL=true
+            fi
           fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "target=${TARGET}" >> "$GITHUB_OUTPUT"
-          echo "prev=${PREV}" >> "$GITHUB_OUTPUT"
-          echo "range=${RANGE}" >> "$GITHUB_OUTPUT"
+
+          if [ "$FULL" = true ]; then
+            RANGE="${ROOT}..${TARGET}"
+            LOG_RANGE="${ROOT}..${TARGET}"
+            DIFF_BASE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            LINK="**完整提交记录**：https://github.com/${GITHUB_REPOSITORY}/commits/${TAG}"
+            IGNORE_TAGS="--ignore-tags v*"
+            echo "使用全量范围：${ROOT}..${TARGET}"
+          else
+            RANGE="${PREV}..${TARGET}"
+            LOG_RANGE="${PREV}..${TARGET}"
+            DIFF_BASE="${PREV}"
+            LINK="**完整对比**：https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${TAG}"
+            IGNORE_TAGS=""
+            echo "使用增量范围：${PREV}..${TARGET}"
+          fi
+
+          {
+            echo "tag=${TAG}"
+            echo "target=${TARGET}"
+            echo "prev=${PREV}"
+            echo "range=${RANGE}"
+            echo "log_range=${LOG_RANGE}"
+            echo "diff_base=${DIFF_BASE}"
+            echo "ignore_tags=${IGNORE_TAGS}"
+            echo "link=${LINK}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Generate categorized changelog
         uses: orhun/git-cliff-action@v4
         with:
           config: .github/cliff.toml
-          args: ${{ steps.meta.outputs.range }} --output changelog.md
+          args: ${{ steps.meta.outputs.range }} ${{ steps.meta.outputs.ignore_tags }} --output changelog.md
 
       - name: Generate release notes
         env:
           VERSION: ${{ steps.version.outputs.name }}
           TAG: ${{ steps.meta.outputs.tag }}
           TARGET: ${{ steps.meta.outputs.target }}
-          PREV: ${{ steps.meta.outputs.prev }}
+          LOG_RANGE: ${{ steps.meta.outputs.log_range }}
+          DIFF_BASE: ${{ steps.meta.outputs.diff_base }}
+          LINK: ${{ steps.meta.outputs.link }}
         run: |
           set -euo pipefail
           APK="Pulse-${TAG}.apk"
@@ -133,16 +164,6 @@ jobs:
           SIZE=$(awk -v b="$BYTES" 'BEGIN { printf "%.1f MB", b / 1048576 }')
           SHA=$(sha256sum "$APK" | awk '{print $1}')
           sha256sum "$APK" > "${APK}.sha256"
-
-          if [ -n "$PREV" ]; then
-            LOG_RANGE="${PREV}..${TARGET}"
-            DIFF_BASE="${PREV}"
-            LINK="**完整对比**：https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${TAG}"
-          else
-            LOG_RANGE="${TARGET}"
-            DIFF_BASE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-            LINK="**完整提交记录**：https://github.com/${GITHUB_REPOSITORY}/commits/${TAG}"
-          fi
 
           COMMIT_COUNT=$(git log --no-merges --pretty=format:%s "${LOG_RANGE}" | grep -vc '^chore: 发布' || true)
           FILE_COUNT=$(git diff --name-only "${DIFF_BASE}" "${TARGET}" | wc -l)
