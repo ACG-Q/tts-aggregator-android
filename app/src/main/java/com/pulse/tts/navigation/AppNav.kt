@@ -25,7 +25,9 @@ import com.pulse.tts.ui.screens.NodesScreen
 import com.pulse.tts.ui.screens.PermissionsScreen
 import com.pulse.tts.ui.screens.ReadingScreen
 import com.pulse.tts.ui.screens.SettingsScreen
+import com.pulse.tts.data.lansync.LanSyncEntry
 import com.pulse.tts.ui.screens.picker.VoicePickerSheet
+import com.pulse.tts.ui.screens.LanSyncScreen
 
 /**
  * 应用壳：一级 Tab（朗读 / 节点 / 记录）+ 子页栈 + 全屏朗读态。
@@ -45,6 +47,12 @@ fun AppNav(
 
     LaunchedEffect(playback.isActive) {
         if (!playback.isActive) readerVisible = false
+    }
+
+    LaunchedEffect(Unit) {
+        LanSyncEntry.pairing.collect { raw ->
+            if (raw != null) nav.goLanSync()
+        }
     }
 
     val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
@@ -90,8 +98,10 @@ fun AppNav(
                 onOpenAdmin = nav::goAdmin,
                 onOpenAbout = nav::goAbout,
                 onOpenVoice = { voicePickerVisible = true },
+                onOpenLanSync = nav::goLanSync,
                 onToast = onToast,
             )
+            is Screen.LanSync -> LanSyncScreen(onBack = { nav.handleBack() })
             is Screen.About -> AboutScreen(
                 onBack = { nav.handleBack() },
                 onToast = onToast,
