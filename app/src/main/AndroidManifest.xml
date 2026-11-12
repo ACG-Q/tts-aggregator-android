@@ -26,6 +26,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pulsetts" android:host="sync" />
+            </intent-filter>
         </activity>
 
         <!-- 系统设置「文字转语音输出」页的语音数据自检与试听 -->
