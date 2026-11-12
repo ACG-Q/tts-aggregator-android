@@ -2,6 +2,9 @@ package com.pulse.tts.data
 
 import android.content.Context
 import android.util.Log
+import com.pulse.tts.data.lansync.MergeStats
+import com.pulse.tts.data.lansync.SyncedNode
+import com.pulse.tts.data.lansync.mergeSyncedNodes
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +85,23 @@ class NodeRepository(
         _nodes.update { list ->
             list.map { if (it.id in ids) it.copy(disabled = disabled) else it }
         }
+    }
+
+    /**
+     * 局域网同步合并：只增不删，已有节点保留密钥、禁用与分组。
+     * 单事务写入，不触发探测。
+     */
+    fun mergeSynced(remote: List<SyncedNode>): MergeStats {
+        val current = _nodes.value
+        val (merged, stats) = mergeSyncedNodes(current, remote)
+        val changed = merged.filter { candidate ->
+            current.none { it.id == candidate.id && it == candidate }
+        }
+        if (changed.isNotEmpty()) {
+            store.insertOrUpdateAll(changed)
+            _nodes.update { list -> changed.fold(list) { acc, node -> acc.withUpserted(node) } }
+        }
+        return stats
     }
 
     /** 编辑节点元信息（标签 / API Key / 分组）；改 Key 后保持原 keyless 判定，重新测试可刷新 */
