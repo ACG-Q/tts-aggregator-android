@@ -90,6 +90,7 @@ fun SettingsScreen(
     onOpenAdmin: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenVoice: () -> Unit,
+    onOpenLanSync: () -> Unit,
     onToast: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -301,6 +302,13 @@ fun SettingsScreen(
             }
 
             SettingsSection("数据") {
+                SettingRow(
+                    title = "局域网同步",
+                    subtitle = "同一 Wi-Fi 下与电脑双向合并节点",
+                    icon = Icons.Rounded.SwapHoriz,
+                    onClick = onOpenLanSync,
+                )
+                SettingDivider()
                 ValueSettingRow(
                     title = "导入节点",
                     subtitle = "JSON 含偏好设置，文本清单仅导入节点",

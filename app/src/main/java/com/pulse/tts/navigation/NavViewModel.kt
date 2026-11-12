@@ -16,6 +16,7 @@ sealed class Screen {
     object Permissions : Screen()
     object Admin : Screen()
     object About : Screen()
+    object LanSync : Screen()
 
     val isMain: Boolean get() = this is Home || this is Nodes || this is Logs
 }
@@ -72,6 +73,7 @@ class NavViewModel : ViewModel() {
     fun goPermissions() = push(Screen.Permissions)
     fun goAdmin() = push(Screen.Admin)
     fun goAbout() = push(Screen.About)
+    fun goLanSync() = push(Screen.LanSync)
 
     private fun Screen.tabOf(): MainTab = when (this) {
         is Screen.Nodes -> MainTab.NODES

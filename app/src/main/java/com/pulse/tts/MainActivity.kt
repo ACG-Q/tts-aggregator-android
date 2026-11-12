@@ -1,6 +1,7 @@
 package com.pulse.tts
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleDeepLink(intent)
         val container = (application as App).container
         playback = PlaybackController(applicationContext, container.settings)
         playback.restoreIfNeeded()
@@ -64,6 +66,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDeepLink(intent)
+    }
+
     override fun onStop() {
         val backgroundPlay = (application as App).container.settings.appSettings.value.backgroundPlay
         playback.onAppBackground(backgroundPlay)
@@ -78,6 +86,13 @@ class MainActivity : ComponentActivity() {
     private fun toast(msg: String) {
         runOnUiThread {
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun handleDeepLink(intent: Intent?) {
+        val data = intent?.data?.toString() ?: return
+        if (data.startsWith("pulsetts://sync", ignoreCase = true)) {
+            com.pulse.tts.data.lansync.LanSyncEntry.offer(data)
         }
     }
 
