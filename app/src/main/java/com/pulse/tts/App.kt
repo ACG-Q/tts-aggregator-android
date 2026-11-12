@@ -21,7 +21,7 @@ import com.pulse.tts.data.VoiceRepository
  *   NodePool                               —— 调度层（按配置路由合成请求）
  */
 class AppContainer(context: Context) {
-    private val appContext = context.applicationContext
+    val appContext = context.applicationContext
 
     // 存储层
     val settings = SettingsStore(appContext)
