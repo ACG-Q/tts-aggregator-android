@@ -13,12 +13,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,16 +37,24 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.lansync.LanSyncEntry
+import com.pulse.tts.ui.LocalAppContainer
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseSubHeader
 import com.pulse.tts.ui.components.SettingGroup
+import com.pulse.tts.ui.components.SettingRow
 import com.pulse.tts.viewmodel.LanSyncPhase
 import com.pulse.tts.viewmodel.LanSyncViewModel
 
 @Composable
 fun LanSyncScreen(onBack: () -> Unit) {
+    val container = LocalAppContainer.current
+    val appSettings by container.settings.appSettings.collectAsState()
     val vm: LanSyncViewModel = appViewModel {
-        LanSyncViewModel(it.appContext, it.nodeRepository)
+        LanSyncViewModel(
+            context = it.appContext,
+            repo = it.nodeRepository,
+            autoAllow = { it.settings.appSettings.value.lanSyncAutoAllow },
+        )
     }
     val state by vm.state.collectAsState()
     val peers by vm.peers.collectAsState()
@@ -80,6 +90,30 @@ fun LanSyncScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 12.dp),
             )
+
+            SettingGroup {
+                SettingRow(
+                    title = "自动允许同步请求",
+                    subtitle = "开启后不再弹窗确认，仅建议在可信任的网络中使用。",
+                    icon = Icons.Rounded.VerifiedUser,
+                    onClick = {
+                        container.settings.updateAppSettings {
+                            it.copy(lanSyncAutoAllow = !it.lanSyncAutoAllow)
+                        }
+                    },
+                    trailing = {
+                        Switch(
+                            checked = appSettings.lanSyncAutoAllow,
+                            onCheckedChange = { value ->
+                                container.settings.updateAppSettings {
+                                    it.copy(lanSyncAutoAllow = value)
+                                }
+                            },
+                        )
+                    },
+                )
+            }
+            Spacer(Modifier.height(12.dp))
 
             SettingGroup {
                 Column(Modifier.padding(14.dp)) {
@@ -166,7 +200,8 @@ fun LanSyncScreen(onBack: () -> Unit) {
                 Text(
                     message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    color = if (state.phase == LanSyncPhase.ERROR) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
