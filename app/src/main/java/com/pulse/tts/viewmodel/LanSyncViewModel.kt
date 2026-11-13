@@ -51,6 +51,7 @@ data class LanSyncState(
 class LanSyncViewModel(
     private val context: Context,
     private val repo: NodeRepository,
+    private val autoAllow: () -> Boolean = { false },
 ) : ViewModel() {
 
     private val discovery = MdnsDiscovery(context)
@@ -160,6 +161,16 @@ class LanSyncViewModel(
     }
 
     private suspend fun askUser(request: IncomingRequest): SyncDecision? {
+        if (autoAllow()) {
+            _state.update {
+                it.copy(
+                    phase = LanSyncPhase.RUNNING,
+                    pending = null,
+                    message = "已自动允许来自 ${request.from.name} 的同步",
+                )
+            }
+            return acceptIncoming(request)
+        }
         val deferred = CompletableDeferred<Boolean>()
         decision = deferred
         _state.update {
@@ -173,6 +184,10 @@ class LanSyncViewModel(
         _state.update { it.copy(pending = null) }
         if (accepted == null) return null
         if (!accepted) return SyncDecision.Reject
+        return acceptIncoming(request)
+    }
+
+    private suspend fun acceptIncoming(request: IncomingRequest): SyncDecision {
         val stats = repo.mergeSynced(request.nodes)
         _state.update { it.copy(phase = LanSyncPhase.DONE, stats = stats) }
         return SyncDecision.Accept(toSyncedNodes(repo.nodes.value), stats.total)
