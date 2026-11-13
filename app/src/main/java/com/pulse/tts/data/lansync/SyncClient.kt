@@ -15,11 +15,14 @@ sealed class SyncOutcome {
     data class Failed(val code: Int) : SyncOutcome()
 }
 
-/** 出站同步：短超时，不重试（同步是用户主动触发，重试只会放大等待）。 */
+/**
+ * 出站同步：连接短超时，读取超时必须覆盖对端的确认窗口，否则用户在
+ * [CONFIRM_TIMEOUT_MS] 内稍晚点击「确认」时本机会先报连接失败，而对端已合并。
+ */
 class SyncClient {
     private val http = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(CONFIRM_TIMEOUT_MS + 10_000, TimeUnit.MILLISECONDS)
         .build()
 
     private val jsonType = "application/json; charset=utf-8".toMediaType()
