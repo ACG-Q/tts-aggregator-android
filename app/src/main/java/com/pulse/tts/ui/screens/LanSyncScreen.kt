@@ -1,5 +1,6 @@
 package com.pulse.tts.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,11 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -37,9 +40,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.lansync.LanSyncEntry
+import com.pulse.tts.data.lansync.parsePairingString
 import com.pulse.tts.ui.LocalAppContainer
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseSubHeader
+import com.pulse.tts.ui.components.QrScannerOverlay
 import com.pulse.tts.ui.components.SettingGroup
 import com.pulse.tts.ui.components.SettingRow
 import com.pulse.tts.viewmodel.LanSyncPhase
@@ -59,6 +64,8 @@ fun LanSyncScreen(onBack: () -> Unit) {
     val state by vm.state.collectAsState()
     val peers by vm.peers.collectAsState()
     var input by remember { mutableStateOf("") }
+    var scanning by remember { mutableStateOf(false) }
+    BackHandler(enabled = scanning) { scanning = false }
 
     LaunchedEffect(Unit) { vm.start() }
     DisposableEffect(Unit) { onDispose { vm.stop() } }
@@ -75,7 +82,16 @@ fun LanSyncScreen(onBack: () -> Unit) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            PulseSubHeader(title = "局域网同步", subtitle = "与电脑双向合并节点", onBack = onBack)
+            PulseSubHeader(
+                title = "局域网同步",
+                subtitle = "与电脑双向合并节点",
+                onBack = onBack,
+                actions = {
+                    IconButton(onClick = { scanning = true }) {
+                        Icon(Icons.Outlined.QrCodeScanner, contentDescription = "扫码")
+                    }
+                },
+            )
         },
     ) { padding ->
         Column(
@@ -206,6 +222,23 @@ fun LanSyncScreen(onBack: () -> Unit) {
                 )
             }
         }
+    }
+
+    if (scanning) {
+        QrScannerOverlay(
+            onClose = { scanning = false },
+            onDecoded = { raw ->
+                val peer = parsePairingString(raw)
+                if (peer == null) {
+                    false
+                } else {
+                    scanning = false
+                    input = raw
+                    vm.syncFromString(raw)
+                    true
+                }
+            },
+        )
     }
 
     state.pending?.let { pending ->
