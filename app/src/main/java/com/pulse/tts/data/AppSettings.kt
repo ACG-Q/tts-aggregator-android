@@ -28,6 +28,7 @@ data class AppSettings(
     val cooldownMinutes: Int = 10,
     val failThreshold: Int = 3,
     val sleepMinutes: Int = 0,
+    val lanSyncAutoAllow: Boolean = false,
 )
 
 object AppSettingsOptions {
