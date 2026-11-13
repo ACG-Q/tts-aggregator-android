@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- 无相机设备仍可安装，仅扫码入口不可用 -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- 电池优化白名单（权限管理页申请，保证系统 TTS 服务保活） -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 

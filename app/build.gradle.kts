@@ -73,6 +73,12 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+    // 相机 + 二维码识别（bundled 模型，不依赖 GMS）
+    val camerax = "1.3.4"
+    implementation("androidx.camera:camera-camera2:$camerax")
+    implementation("androidx.camera:camera-lifecycle:$camerax")
+    implementation("androidx.camera:camera-view:$camerax")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
     // 网络
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // 协程 + 序列化
