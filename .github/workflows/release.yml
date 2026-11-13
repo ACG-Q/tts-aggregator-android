@@ -176,13 +176,17 @@ jobs:
           LINK: ${{ steps.meta.outputs.link }}
         run: |
           set -euo pipefail
-          APK="Pulse-${TAG}.apk"
           IFS=. read -r major minor patch <<< "$VERSION"
           VERSION_CODE=$((major * 10000 + minor * 100 + patch))
-          BYTES=$(stat -c%s "$APK")
-          SIZE=$(awk -v b="$BYTES" 'BEGIN { printf "%.1f MB", b / 1048576 }')
-          SHA=$(sha256sum "$APK" | awk '{print $1}')
-          sha256sum "$APK" > "${APK}.sha256"
+          : > download-rows.md
+          for ABI in armeabi-v7a arm64-v8a x86 x86_64 universal; do
+            APK="Pulse-${TAG}-${ABI}.apk"
+            BYTES=$(stat -c%s "$APK")
+            SIZE=$(awk -v b="$BYTES" 'BEGIN { printf "%.1f MB", b / 1048576 }')
+            SHA=$(sha256sum "$APK" | awk '{print $1}')
+            sha256sum "$APK" > "${APK}.sha256"
+            printf '| `%s` | %s | %s | `%s` |\n' "$APK" "$ABI" "$SIZE" "$SHA" >> download-rows.md
+          done
 
           COMMIT_COUNT=$(git log --no-merges --pretty=format:%s "${LOG_RANGE}" | grep -vc '^chore: 发布' || true)
           FILE_COUNT=$(git diff --name-only "${DIFF_BASE}" "${TARGET}" | wc -l)
@@ -249,9 +253,11 @@ jobs:
             fi
             echo "### 下载"
             echo
-            echo "| 文件 | 大小 | SHA-256 |"
-            echo "| --- | --- | --- |"
-            echo "| \`${APK}\` | ${SIZE} | \`${SHA}\` |"
+            echo "| 文件 | ABI | 大小 | SHA-256 |"
+            echo "| --- | --- | --- | --- |"
+            cat download-rows.md
+            echo
+            echo "大多数手机选 \`arm64-v8a\`；不确定架构时使用 \`universal\`（体积更大，兼容全部）。"
             echo
             echo "### 版本信息"
             echo
@@ -271,8 +277,8 @@ jobs:
         with:
           name: Pulse-v${{ steps.version.outputs.name }}
           path: |
-            Pulse-v${{ steps.version.outputs.name }}.apk
-            Pulse-v${{ steps.version.outputs.name }}.apk.sha256
+            Pulse-v${{ steps.version.outputs.name }}-*.apk
+            Pulse-v${{ steps.version.outputs.name }}-*.apk.sha256
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -280,8 +286,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Pulse-v${{ steps.version.outputs.name }}.apk
-            Pulse-v${{ steps.version.outputs.name }}.apk.sha256
+            Pulse-v${{ steps.version.outputs.name }}-*.apk
+            Pulse-v${{ steps.version.outputs.name }}-*.apk.sha256
           name: Pulse v${{ steps.version.outputs.name }}
           body_path: release-notes.md
           fail_on_unmatched_files: true
