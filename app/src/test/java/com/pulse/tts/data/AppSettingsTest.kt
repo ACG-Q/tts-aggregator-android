@@ -1,5 +1,6 @@
 package com.pulse.tts.data
 
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,5 +34,18 @@ class AppSettingsTest {
         assertEquals(10, s.cooldownMinutes)
         assertEquals(3, s.failThreshold)
         assertEquals(0, s.sleepMinutes)
+    }
+
+    @Test
+    fun `局域网自动允许默认关闭`() {
+        assertFalse(AppSettings().lanSyncAutoAllow)
+    }
+
+    @Test
+    fun `局域网自动允许可序列化往返`() {
+        val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
+        val encoded = json.encodeToString(AppSettings.serializer(), AppSettings(lanSyncAutoAllow = true))
+        val decoded = json.decodeFromString(AppSettings.serializer(), encoded)
+        assertTrue(decoded.lanSyncAutoAllow)
     }
 }
