@@ -1,6 +1,6 @@
 # 安卓端局域网同步「自动允许 + 应用内扫码」实现计划
 
-> **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
+> **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [x]`）语法来跟踪进度。
 
 **目标：** 安卓同步页新增「自动允许」开关（默认关闭、持久化）与右上角扫码入口（CameraX + ML Kit），扫到配对码后直接发起同步。
 
@@ -27,7 +27,7 @@
 - 修改：`app/src/main/java/com/pulse/tts/data/AppSettings.kt`
 - 测试：`app/src/test/java/com/pulse/tts/data/AppSettingsTest.kt`（已存在，追加用例）
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 在 `AppSettingsTest` 中追加：
 
@@ -48,12 +48,12 @@
 
 需要新增的 import：`kotlinx.serialization.json.Json`。
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`./gradlew.bat testDebugUnitTest --tests "com.pulse.tts.data.AppSettingsTest"`
 预期：编译失败，`lanSyncAutoAllow` 未定义。
 
-- [ ] **步骤 3：实现字段**
+- [x] **步骤 3：实现字段**
 
 ```kotlin
 @Serializable
@@ -73,12 +73,12 @@ data class AppSettings(
 
 旧版本已保存的 JSON 不含该字段；`SettingsStore` 的 `Json { ignoreUnknownKeys = true }` 与默认值可正常兼容，无需迁移。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：`./gradlew.bat testDebugUnitTest --tests "com.pulse.tts.data.AppSettingsTest"`
 预期：BUILD SUCCESSFUL。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add app/src/main/java/com/pulse/tts/data/AppSettings.kt app/src/test/java/com/pulse/tts/data/AppSettingsTest.kt
@@ -92,7 +92,7 @@ git commit -m "feat(lan-sync): 新增自动允许设置字段"
 **文件：**
 - 修改：`app/src/main/java/com/pulse/tts/viewmodel/LanSyncViewModel.kt`
 
-- [ ] **步骤 1：注入开关**
+- [x] **步骤 1：注入开关**
 
 ```kotlin
 class LanSyncViewModel(
@@ -104,7 +104,7 @@ class LanSyncViewModel(
 
 默认值 `{ false }` 保证现有调用方与测试无需改动。
 
-- [ ] **步骤 2：抽取合并逻辑并短路 `askUser`**
+- [x] **步骤 2：抽取合并逻辑并短路 `askUser`**
 
 现有 `askUser` 里「合并 + 回传」的三行提取成私有函数，手动与自动两条路径共用：
 
@@ -147,12 +147,12 @@ class LanSyncViewModel(
 
 `X-Sync-Session` 校验在 `SyncServer` 内先于 `confirm` 执行，自动允许不绕过鉴权。
 
-- [ ] **步骤 3：编译验证**
+- [x] **步骤 3：编译验证**
 
 运行：`./gradlew.bat assembleDebug`
 预期：BUILD SUCCESSFUL。
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add app/src/main/java/com/pulse/tts/viewmodel/LanSyncViewModel.kt
@@ -166,7 +166,7 @@ git commit -m "feat(lan-sync): ViewModel 支持自动允许"
 **文件：**
 - 修改：`app/src/main/java/com/pulse/tts/ui/screens/LanSyncScreen.kt`
 
-- [ ] **步骤 1：构造 ViewModel 时传入开关读取**
+- [x] **步骤 1：构造 ViewModel 时传入开关读取**
 
 ```kotlin
     val container = LocalAppContainer.current
@@ -182,7 +182,7 @@ git commit -m "feat(lan-sync): ViewModel 支持自动允许"
 
 回调用 `value` 实时读取，切换开关立即生效，无需重建 VM。
 
-- [ ] **步骤 2：加开关行**
+- [x] **步骤 2：加开关行**
 
 `SettingsScreen` 里的 `SwitchSettingRow` 是 `private`，不可复用；在 `LanSyncScreen.kt` 内用公共 `SettingRow` + `Switch` 组合：
 
@@ -217,7 +217,7 @@ git commit -m "feat(lan-sync): ViewModel 支持自动允许"
 
 新增 import：`androidx.compose.material.icons.rounded.VerifiedUser`、`androidx.compose.material3.Switch`、`com.pulse.tts.ui.LocalAppContainer`、`com.pulse.tts.ui.components.SettingRow`。
 
-- [ ] **步骤 3：状态消息不再一律标红**
+- [x] **步骤 3：状态消息不再一律标红**
 
 自动允许成功时 `message` 非空但 `phase == DONE`，当前实现会把它渲染成错误色。改为：
 
@@ -233,12 +233,12 @@ git commit -m "feat(lan-sync): ViewModel 支持自动允许"
             }
 ```
 
-- [ ] **步骤 4：编译验证**
+- [x] **步骤 4：编译验证**
 
 运行：`./gradlew.bat assembleDebug`
 预期：BUILD SUCCESSFUL。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add app/src/main/java/com/pulse/tts/ui/screens/LanSyncScreen.kt
@@ -253,7 +253,7 @@ git commit -m "feat(lan-sync): 同步页自动允许开关"
 - 修改：`app/build.gradle.kts`
 - 修改：`app/src/main/AndroidManifest.xml`
 
-- [ ] **步骤 1：添加依赖**
+- [x] **步骤 1：添加依赖**
 
 在 `dependencies { }` 的「网络」区块前插入：
 
@@ -268,7 +268,7 @@ git commit -m "feat(lan-sync): 同步页自动允许开关"
 
 许可证：CameraX 与 ML Kit 均为 Apache-2.0；预计 APK 增加 3~4 MB。
 
-- [ ] **步骤 2：声明权限**
+- [x] **步骤 2：声明权限**
 
 在 `AndroidManifest.xml` 的 `POST_NOTIFICATIONS` 之后插入：
 
@@ -278,12 +278,12 @@ git commit -m "feat(lan-sync): 同步页自动允许开关"
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 ```
 
-- [ ] **步骤 3：同步与编译**
+- [x] **步骤 3：同步与编译**
 
 运行：`./gradlew.bat assembleDebug`
 预期：BUILD SUCCESSFUL（首次会下载依赖）。
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add app/build.gradle.kts app/src/main/AndroidManifest.xml
@@ -297,7 +297,7 @@ git commit -m "feat(scan): 接入 CameraX 与 ML Kit 并声明相机权限"
 **文件：**
 - 创建：`app/src/main/java/com/pulse/tts/ui/components/QrScannerOverlay.kt`
 
-- [ ] **步骤 1：实现组件**
+- [x] **步骤 1：实现组件**
 
 回调返回 `Boolean`：`true` 表示已接受（调用方负责关闭覆盖层），`false` 表示不是配对码，覆盖层继续扫并自行提示。
 
@@ -497,12 +497,12 @@ private fun QrCameraPreview(onText: (String) -> Unit, modifier: Modifier) {
 - 同一文本在 1.5 秒内不重复回调，防止提示刷屏。
 - 离开组合时 `executor.shutdown()` 并关手电筒；`provider` 随 `PreviewView` 销毁自动解绑，无需额外持有。
 
-- [ ] **步骤 2：编译验证**
+- [x] **步骤 2：编译验证**
 
 运行：`./gradlew.bat assembleDebug`
 预期：BUILD SUCCESSFUL。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add app/src/main/java/com/pulse/tts/ui/components/QrScannerOverlay.kt
@@ -516,7 +516,7 @@ git commit -m "feat(scan): 应用内二维码扫描覆盖层"
 **文件：**
 - 修改：`app/src/main/java/com/pulse/tts/ui/screens/LanSyncScreen.kt`
 
-- [ ] **步骤 1：状态与入口**
+- [x] **步骤 1：状态与入口**
 
 ```kotlin
     var scanning by remember { mutableStateOf(false) }
@@ -537,7 +537,7 @@ git commit -m "feat(scan): 应用内二维码扫描覆盖层"
 
 新增 import：`androidx.compose.material.icons.outlined.QrCodeScanner`、`androidx.compose.material3.IconButton`、`com.pulse.tts.ui.components.QrScannerOverlay`。
 
-- [ ] **步骤 2：覆盖层与识别结果**
+- [x] **步骤 2：覆盖层与识别结果**
 
 放在 `Scaffold` 之后、`state.pending` 弹窗之前：
 
@@ -562,12 +562,12 @@ git commit -m "feat(scan): 应用内二维码扫描覆盖层"
 
 `parsePairingString` 在 `LanSyncViewModel` 里已 import 同包函数，但本文件需要显式 `import com.pulse.tts.data.lansync.parsePairingString`。
 
-- [ ] **步骤 3：编译验证**
+- [x] **步骤 3：编译验证**
 
 运行：`./gradlew.bat assembleDebug`
 预期：BUILD SUCCESSFUL。
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add app/src/main/java/com/pulse/tts/ui/screens/LanSyncScreen.kt
@@ -578,12 +578,12 @@ git commit -m "feat(scan): 同步页右上角扫码入口"
 
 ### 任务 7：整体验证
 
-- [ ] **步骤 1：单元测试与构建**
+- [x] **步骤 1：单元测试与构建**
 
 运行：`./gradlew.bat testDebugUnitTest assembleDebug`
 预期：BUILD SUCCESSFUL。
 
-- [ ] **步骤 2：模拟器验收**
+- [x] **步骤 2：模拟器验收**
 
 安装：`adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk`
 
@@ -595,7 +595,7 @@ git commit -m "feat(scan): 同步页右上角扫码入口"
 6. 拒绝相机权限 → 显示权限提示，粘贴配对串路径仍可用。
 7. 返回退出页面后，桌面再次发起同步失败（端口已释放），返回页面后恢复。
 
-- [ ] **步骤 3：Commit（若有验收期修正）**
+- [x] **步骤 3：Commit（若有验收期修正）**
 
 ```bash
 git add -A
