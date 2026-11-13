@@ -138,12 +138,13 @@ export JAVA_HOME=/path/to/jdk-17
 ./gradlew :app:assembleDebug
 ```
 
-产物路径：`app/build/outputs/apk/debug/app-debug.apk`
+产物路径：`app/build/outputs/apk/debug/`，按 ABI 拆分，例如模拟器用 `app-x86_64-debug.apk`、真机用 `app-arm64-v8a-debug.apk`。
 
 安装到已连接设备：
 
 ```powershell
-adb install -r app\build\outputs\apk\debug\app-debug.apk
+adb install -r app\build\outputs\apk\debug\app-arm64-v8a-debug.apk   # 真机
+adb install -r app\build\outputs\apk\debug\app-x86_64-debug.apk      # 模拟器
 ```
 
 ### 运行单元测试
@@ -179,6 +180,16 @@ Windows：
 ```
 
 发布所需密钥配置在仓库 Secrets 中：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
+
+发布的 Release 包含四个 ABI 的分架构包与一个通用包：
+
+| 文件 | 适用设备 |
+| --- | --- |
+| `Pulse-v{版本}-arm64-v8a.apk` | 绝大多数现代手机（推荐） |
+| `Pulse-v{版本}-armeabi-v7a.apk` | 32 位 ARM 老设备 |
+| `Pulse-v{版本}-x86.apk` | x86 模拟器（32 位） |
+| `Pulse-v{版本}-x86_64.apk` | x86_64 模拟器 / 部分平板 |
+| `Pulse-v{版本}-universal.apk` | 不确定架构时使用，体积最大 |
 
 ## 使用说明
 
