@@ -2,13 +2,18 @@ package com.pulse.tts
 
 import android.app.Application
 import android.content.Context
+import android.os.Build
 import com.pulse.tts.data.LogStore
 import com.pulse.tts.data.NodePool
 import com.pulse.tts.data.NodeRepository
 import com.pulse.tts.data.NodeStore
 import com.pulse.tts.data.SettingsStore
 import com.pulse.tts.data.TtsApiClient
+import com.pulse.tts.data.UpdateClient
+import com.pulse.tts.data.UpdateDownloader
+import com.pulse.tts.data.UpdateRepository
 import com.pulse.tts.data.VoiceRepository
+import java.io.File
 
 /**
  * 手写依赖容器（替代 Hilt）：
@@ -37,6 +42,19 @@ class AppContainer(context: Context) {
 
     // 调度层
     val nodePool = NodePool(nodeRepository, settings, logStore, api)
+
+    // 更新检查
+    val updateClient = UpdateClient()
+    val updateRepository = UpdateRepository(
+        settings = settings,
+        client = updateClient,
+        downloader = UpdateDownloader(
+            http = updateClient.http,
+            dir = File(appContext.cacheDir, "updates"),
+        ),
+        currentVersionCode = BuildConfig.VERSION_CODE,
+        deviceAbis = Build.SUPPORTED_ABIS.toList(),
+    )
 }
 
 class App : Application() {

@@ -25,6 +25,7 @@ import com.pulse.tts.ui.ProvideAppContainer
 import com.pulse.tts.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * 宿主 Activity：只负责 Compose 容器、全局播放器与 Toast。
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
         playback = PlaybackController(applicationContext, container.settings)
         playback.restoreIfNeeded()
         startLaunchProbeIfEnabled(container, isFreshLaunch = savedInstanceState == null)
+        startUpdateCheckIfNeeded(container, isFreshLaunch = savedInstanceState == null)
 
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
@@ -59,7 +61,11 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background,
                     ) {
-                        AppNav(player = playback, onToast = ::toast)
+                        AppNav(
+                            player = playback,
+                            onToast = ::toast,
+                            onExitApp = { finishAffinity() },
+                        )
                     }
                 }
             }
@@ -110,6 +116,23 @@ class MainActivity : ComponentActivity() {
             if (ids.isEmpty()) return@launch
             runCatching { container.nodeRepository.probeAll(ids) }
                 .onFailure { Log.w(TAG, "launch probe failed", it) }
+        }
+    }
+
+    /**
+     * 冷启动静默检查更新：带 6 小时节流，仅强制更新会弹窗。
+     * 任何网络异常都在仓库层忽略，这里只兜底记录。
+     */
+    private fun startUpdateCheckIfNeeded(container: AppContainer, isFreshLaunch: Boolean) {
+        if (!isFreshLaunch) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                container.updateRepository.checkOnLaunch()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "launch update check failed", e)
+            }
         }
     }
 
