@@ -21,7 +21,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.pulse.tts.ui.components.AppCard
 import com.pulse.tts.ui.components.PulseBrandMark
 import com.pulse.tts.ui.components.PulseSubHeader
+import com.pulse.tts.ui.appViewModel
+import com.pulse.tts.viewmodel.UpdateViewModel
 
 /**
  * 关于：应用定位、能力清单与开源项目入口。
@@ -42,6 +47,8 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val version = remember { context.appVersion() }
+    val updateVm: UpdateViewModel = appViewModel { UpdateViewModel(it.updateRepository) }
+    val updateState by updateVm.state.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -71,11 +78,23 @@ fun AboutScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(
-                        "版本 $version",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "版本 $version",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(
+                            onClick = { if (!updateState.checking) updateVm.checkManually() },
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                        ) {
+                            Text(
+                                if (updateState.checking) "检查中…" else "检查更新",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
                     Text(
                         "把文字交给声音。",
                         style = MaterialTheme.typography.bodySmall,

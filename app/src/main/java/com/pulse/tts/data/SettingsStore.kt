@@ -88,6 +88,15 @@ class SettingsStore(context: Context) {
 
     fun readRaw(key: String): String? = prefs.getString(key, null)
 
+    // ---------- 更新检查节流 ----------
+
+    fun saveLastUpdateCheck(at: Long) {
+        writeRaw(KEY_UPDATE_LAST_CHECK, at.toString())
+    }
+
+    fun readLastUpdateCheck(): Long =
+        readRaw(KEY_UPDATE_LAST_CHECK)?.toLongOrNull() ?: 0L
+
     // ---------- 播放快照 ----------
 
     fun savePlaybackSnapshot(snapshot: PlaybackSnapshot) {
@@ -107,6 +116,7 @@ class SettingsStore(context: Context) {
         const val KEY_APP = "app_settings"
         const val KEY_VOICES_CACHE = "voices_cache"
         const val KEY_PLAYBACK = "playback_snapshot"
+        const val KEY_UPDATE_LAST_CHECK = "update_last_check_at"
 
         private val snapshotJson = Json { ignoreUnknownKeys = true }
 

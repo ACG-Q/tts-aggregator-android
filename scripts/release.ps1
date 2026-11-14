@@ -23,6 +23,16 @@ $versionCode = [int]$segments[0] * 10000 + $minor * 100 + $patch
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $repoRoot
 try {
+    $policyFile = Join-Path $repoRoot 'update-policy.json'
+    if (Test-Path $policyFile) {
+        $policy = [IO.File]::ReadAllText($policyFile, [Text.Encoding]::UTF8) | ConvertFrom-Json
+        $minSupported = [int]$policy.minSupportedVersionCode
+        if ($minSupported -lt 0 -or $minSupported -gt $versionCode) {
+            throw "update-policy.json 的 minSupportedVersionCode=$minSupported 必须在 0..$versionCode 之间"
+        }
+        Write-Host "强制更新门槛：minSupportedVersionCode = $minSupported"
+    }
+
     $gradleFile = Join-Path $repoRoot 'app/build.gradle.kts'
     $pattern = 'val appVersionName = "\d+\.\d+\.\d+"'
     $content = [IO.File]::ReadAllText($gradleFile, [Text.Encoding]::UTF8)

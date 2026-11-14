@@ -25,9 +25,12 @@ import com.pulse.tts.ui.screens.NodesScreen
 import com.pulse.tts.ui.screens.PermissionsScreen
 import com.pulse.tts.ui.screens.ReadingScreen
 import com.pulse.tts.ui.screens.SettingsScreen
+import com.pulse.tts.ui.screens.UpdateHost
 import com.pulse.tts.data.lansync.LanSyncEntry
 import com.pulse.tts.ui.screens.picker.VoicePickerSheet
 import com.pulse.tts.ui.screens.LanSyncScreen
+import com.pulse.tts.ui.appViewModel
+import com.pulse.tts.viewmodel.UpdateViewModel
 
 /**
  * 应用壳：一级 Tab（朗读 / 节点 / 记录）+ 子页栈 + 全屏朗读态。
@@ -37,8 +40,10 @@ import com.pulse.tts.ui.screens.LanSyncScreen
 fun AppNav(
     player: PlaybackController,
     onToast: (String) -> Unit,
+    onExitApp: () -> Unit,
 ) {
     val nav: NavViewModel = viewModel()
+    val updateVm: UpdateViewModel = appViewModel { UpdateViewModel(it.updateRepository) }
     val screen by nav.screen.collectAsState()
     val tab by nav.tab.collectAsState()
     val playback by player.state.collectAsState()
@@ -142,5 +147,11 @@ fun AppNav(
                 onToast = onToast,
             )
         }
+
+        UpdateHost(
+            vm = updateVm,
+            onToast = onToast,
+            onExitApp = onExitApp,
+        )
     }
 }

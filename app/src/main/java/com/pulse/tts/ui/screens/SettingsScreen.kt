@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.FileDownload
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
@@ -68,16 +71,20 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.ThemeMode
 import com.pulse.tts.data.exportNodesJson
+import com.pulse.tts.data.normalizeGithubProxy
 import com.pulse.tts.playback.ReadTuning
 import com.pulse.tts.ui.appViewModel
+import com.pulse.tts.ui.components.AppTextField
 import com.pulse.tts.ui.components.PulseSubHeader
 import com.pulse.tts.ui.components.SettingDivider
 import com.pulse.tts.ui.components.SettingGroup
 import com.pulse.tts.ui.components.SettingRow
 import com.pulse.tts.ui.components.SettingRowLayout
 import com.pulse.tts.ui.permissions.permissionBadgeText
+import com.pulse.tts.ui.util.shortUrl
 import com.pulse.tts.ui.util.voiceDisplayName
 import com.pulse.tts.viewmodel.SettingsViewModel
+import com.pulse.tts.viewmodel.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,6 +104,8 @@ fun SettingsScreen(
     val vm: SettingsViewModel = appViewModel {
         SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository)
     }
+    val updateVm: UpdateViewModel = appViewModel { UpdateViewModel(it.updateRepository) }
+    val updateState by updateVm.state.collectAsState()
     val appSettings by vm.appSettings.collectAsState()
     val synth by vm.synthSettings.collectAsState()
     val pool by vm.poolConfig.collectAsState()
@@ -109,6 +118,9 @@ fun SettingsScreen(
 
     var showPrivacy by remember { mutableStateOf(false) }
     var showClearLogs by remember { mutableStateOf(false) }
+    var showProxyInput by remember { mutableStateOf(false) }
+    var proxyDraft by remember { mutableStateOf("") }
+    var proxyError by remember { mutableStateOf<String?>(null) }
     var permissionStates by remember { mutableStateOf(readPermissionStates(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -369,6 +381,31 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSection("应用") {
+                ValueSettingRow(
+                    title = "检查更新",
+                    subtitle = "当前版本 v$version",
+                    icon = Icons.Rounded.SystemUpdate,
+                    value = if (updateState.checking) "检查中…" else "",
+                    onClick = { if (!updateState.checking) updateVm.checkManually() },
+                )
+                SettingDivider()
+                ValueSettingRow(
+                    title = "GitHub 加速地址",
+                    subtitle = "仅用于检查更新与下载 APK，留空直连",
+                    icon = Icons.Rounded.Cloud,
+                    value = appSettings.githubProxy
+                        .takeIf { it.isNotBlank() }
+                        ?.let { shortUrl(it, 22) }
+                        ?: "直连",
+                    onClick = {
+                        proxyDraft = appSettings.githubProxy
+                        proxyError = null
+                        showProxyInput = true
+                    },
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -426,6 +463,57 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearLogs = false }) { Text("取消") }
+            },
+        )
+    }
+
+    if (showProxyInput) {
+        AlertDialog(
+            onDismissRequest = { showProxyInput = false },
+            title = { Text("GitHub 加速地址") },
+            text = {
+                Column {
+                    AppTextField(
+                        value = proxyDraft,
+                        onValueChange = {
+                            proxyDraft = it
+                            proxyError = null
+                        },
+                        placeholder = "https://ghproxy.net/",
+                        isError = proxyError != null,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "填写加速服务前缀，例如 https://ghproxy.net/。留空表示直连。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    proxyError?.let { error ->
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            error,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val normalized = normalizeGithubProxy(proxyDraft)
+                        if (normalized == null) {
+                            proxyError = "地址必须以 http:// 或 https:// 开头"
+                        } else {
+                            vm.updateApp { it.copy(githubProxy = normalized) }
+                            showProxyInput = false
+                            onToast(if (normalized.isBlank()) "已改为直连" else "加速地址已保存")
+                        }
+                    },
+                ) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showProxyInput = false }) { Text("取消") }
             },
         )
     }

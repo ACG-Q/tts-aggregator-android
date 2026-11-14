@@ -54,6 +54,13 @@
 - 注册为 Android 系统 TTS 引擎，其他应用调用系统朗读时可直接使用
 - 系统设置中的「文字转语音输出」可正常识别与试听
 
+### 更新
+
+- **手动检查更新**：设置页与关于页均可触发，默认不自动打扰
+- **强制更新通道**：发布侧可通过 `update-policy.json` 要求低于最低支持版本的客户端升级
+- **GitHub 加速地址**：可配置代理前缀，仅作用于检查更新与 APK 下载
+- 应用内下载并校验 SHA-256 后拉起系统安装器，失败自动回退到浏览器下载页
+
 ### 记录与诊断
 
 - 记录每次合成的节点、耗时、尝试次数、失败原因与节点切换来源
@@ -181,6 +188,14 @@ Windows：
 
 发布所需密钥配置在仓库 Secrets 中：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
 
+CI 还会生成 `update.json` 并随 APK 一起上传，客户端据此检查更新。强制更新由仓库根目录的 `update-policy.json` 控制：
+
+```json
+{ "minSupportedVersionCode": 0 }
+```
+
+默认 `0` 表示不强制。zuoban/tts 出现破坏性变更、需要旧版本必须升级时，在发版前把它改为「必须升级到的 versionCode」（例如 `10005`），CI 会写入 `update.json`，低于该版本的客户端会在启动时被拦截。
+
 发布的 Release 包含四个 ABI 的分架构包与一个通用包：
 
 | 文件 | 适用设备 |
@@ -200,6 +215,7 @@ Windows：
 5. **开始朗读**：在朗读页粘贴文本，点击「开始朗读」；播放页支持倍速、跳转与睡眠定时。
 6. **设为系统引擎**：进入「设置 → 系统 TTS 引擎」，将 Pulse 设为默认引擎，其他应用即可调用。
 7. **检查权限**：进入「设置 → 权限」，按提示授予通知、电池白名单与后台运行权限。
+8. **检查更新**：进入「设置 → 应用 → 检查更新」或「关于」页点击「检查更新」。GitHub 直连不稳定时，可在「GitHub 加速地址」填入代理前缀（如 `https://ghproxy.net/`），留空表示直连。
 
 ## 权限说明
 
@@ -208,6 +224,7 @@ Windows：
 | `INTERNET` | 访问所选 TTS 节点进行合成 |
 | `POST_NOTIFICATIONS` | 后台播放状态与朗读完成提醒 |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | 避免朗读过程中服务被系统回收 |
+| `REQUEST_INSTALL_PACKAGES` | 应用内下载更新后拉起系统安装器 |
 
 应用内部还会引导跳转到系统的「应用设置」「数据节省设置」「TTS 设置」等页面，用于处理国产 ROM 的后台限制。
 
@@ -247,6 +264,10 @@ app/src/main/java/com/pulse/tts/
 **支持哪些节点服务？**
 
 兼容提供 `/api/v1/tts`、`/tts` 或 `/voices` 的 HTTP TTS 服务，新老两代部署均可。
+
+**检查更新失败怎么办？**
+
+先确认网络可访问 GitHub。若直连超时，在「设置 → 应用 → GitHub 加速地址」填入可用的加速前缀（例如 `https://ghproxy.net/`），保存后重新检查。加速地址只影响检查更新与 APK 下载，不影响朗读与节点。
 
 ## 隐私说明
 

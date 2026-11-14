@@ -272,6 +272,65 @@ jobs:
 
           cat release-notes.md
 
+      - name: Generate update manifest
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          IFS=. read -r major minor patch <<< "$VERSION"
+          export VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+          python3 - <<'PY'
+          import json
+          import os
+
+          version = os.environ["VERSION"]
+          tag = os.environ["TAG"]
+          repo = os.environ["REPO"]
+          version_code = int(os.environ["VERSION_CODE"])
+
+          min_supported = 0
+          if os.path.exists("update-policy.json"):
+              with open("update-policy.json", encoding="utf-8-sig") as f:
+                  min_supported = int(json.load(f).get("minSupportedVersionCode", 0) or 0)
+          if min_supported < 0 or min_supported > version_code:
+              raise SystemExit(
+                  f"update-policy.json 的 minSupportedVersionCode={min_supported} "
+                  f"必须在 0..{version_code} 之间"
+              )
+
+          abis = ["armeabi-v7a", "arm64-v8a", "x86", "x86_64", "universal"]
+          apks = {}
+          sha256 = {}
+          for abi in abis:
+              apk = f"Pulse-v{version}-{abi}.apk"
+              if not os.path.exists(apk) or not os.path.exists(f"{apk}.sha256"):
+                  raise SystemExit(f"缺少 {apk} 或其校验文件")
+              apks[abi] = f"https://github.com/{repo}/releases/download/{tag}/{apk}"
+              with open(f"{apk}.sha256", encoding="utf-8") as f:
+                  sha256[abi] = f.read().split()[0]
+
+          notes = ""
+          if os.path.exists("changelog.md"):
+              with open("changelog.md", encoding="utf-8") as f:
+                  notes = f.read().strip()
+
+          data = {
+              "versionName": version,
+              "versionCode": version_code,
+              "minSupportedVersionCode": min_supported,
+              "releasePage": f"https://github.com/{repo}/releases/tag/{tag}",
+              "notes": notes,
+              "apks": apks,
+              "sha256": sha256,
+          }
+          with open("update.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          print(json.dumps(data, ensure_ascii=False, indent=2))
+          PY
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -279,6 +338,7 @@ jobs:
           path: |
             Pulse-v${{ steps.version.outputs.name }}-*.apk
             Pulse-v${{ steps.version.outputs.name }}-*.apk.sha256
+            update.json
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -288,6 +348,7 @@ jobs:
           files: |
             Pulse-v${{ steps.version.outputs.name }}-*.apk
             Pulse-v${{ steps.version.outputs.name }}-*.apk.sha256
+            update.json
           name: Pulse v${{ steps.version.outputs.name }}
           body_path: release-notes.md
           fail_on_unmatched_files: true

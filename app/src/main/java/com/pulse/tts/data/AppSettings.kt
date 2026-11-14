@@ -29,6 +29,8 @@ data class AppSettings(
     val failThreshold: Int = 3,
     val sleepMinutes: Int = 0,
     val lanSyncAutoAllow: Boolean = false,
+    /** GitHub 加速前缀，留空表示直连；只用于检查更新与 APK 下载 */
+    val githubProxy: String = "",
 )
 
 object AppSettingsOptions {
