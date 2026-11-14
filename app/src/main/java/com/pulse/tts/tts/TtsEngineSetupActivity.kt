@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import com.pulse.tts.R
+import java.util.Locale
 
 /**
  * 系统「文字转语音输出」页的引擎自检与试听入口。
@@ -20,10 +21,15 @@ class TtsEngineSetupActivity : Activity() {
         val result = Intent()
         when (intent?.action) {
             TextToSpeech.Engine.ACTION_CHECK_TTS_DATA -> {
+                // 系统设置会把引擎默认语言与这里的列表逐项比对，
+                // 默认语言（通常等于系统语言）不在列表里就会禁用试听
                 result.putStringArrayListExtra(
                     TextToSpeech.Engine.EXTRA_AVAILABLE_VOICES,
-                    // 系统设置按 ISO3 比对默认语言（zh_CN → zho-CHN），这里不能写 zh-CN
-                    arrayListOf("zho-CHN"),
+                    ArrayList(
+                        TtsLanguageSupport.availableVoiceTags(
+                            listOf(Locale.getDefault(), Locale.SIMPLIFIED_CHINESE),
+                        ),
+                    ),
                 )
                 setResult(TextToSpeech.Engine.CHECK_VOICE_DATA_PASS, result)
             }
