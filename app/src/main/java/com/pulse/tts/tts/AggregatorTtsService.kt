@@ -5,12 +5,14 @@ import android.speech.tts.SynthesisCallback
 import android.speech.tts.SynthesisRequest
 import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeechService
+import android.speech.tts.Voice
 import com.pulse.tts.appContainer
 import com.pulse.tts.data.SynthPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import java.util.Locale
 
 /**
  * 系统 TTS 引擎（URL TTS 实现）。
@@ -19,6 +21,9 @@ import kotlinx.coroutines.cancel
  * 从聚合节点合成 MP3 → MediaCodec 解码为 PCM → 通过 SynthesisCallback 输出。
  * 合成/解码在独立协程里跑，不阻塞 TTS 工作线程；onStop 取消协程并中断
  * OkHttp 调用，「停止朗读」即时生效。
+ *
+ * 语言/音色元数据只暴露一个中文音色：默认实现会枚举全部 locale 生成几百个
+ * 虚假 voice，并让默认语言与引擎实际音色不一致。
  */
 class AggregatorTtsService : TextToSpeechService() {
 
@@ -36,15 +41,40 @@ class AggregatorTtsService : TextToSpeechService() {
         )
     }
 
-    // ---------- 语言相关（云端任意语言，固定返回支持） ----------
+    // ---------- 语言/音色元数据（云端任意语言，固定一个中文音色） ----------
 
     override fun onIsLanguageAvailable(lang: String?, country: String?, variant: String?): Int =
-        TextToSpeech.LANG_AVAILABLE
+        TtsLanguageSupport.availabilityOf(lang, country, variant)
 
     override fun onLoadLanguage(lang: String?, country: String?, variant: String?): Int =
-        TextToSpeech.LANG_AVAILABLE
+        TtsLanguageSupport.availabilityOf(lang, country, variant)
 
-    override fun onGetLanguage(): Array<String> = arrayOf("zh", "CN", "")
+    override fun onGetLanguage(): Array<String> = arrayOf("zho", "CHN", "")
+
+    override fun onGetVoices(): List<Voice> = listOf(defaultVoice())
+
+    override fun onGetDefaultVoiceNameFor(lang: String?, country: String?, variant: String?): String =
+        TtsLanguageSupport.VOICE_NAME
+
+    override fun onIsValidVoiceName(voiceName: String?): Int =
+        if (voiceName == TtsLanguageSupport.VOICE_NAME) TextToSpeech.SUCCESS else TextToSpeech.ERROR
+
+    @Suppress("DEPRECATION") // 系统设置的「需要网络」判断仍读取该 feature key
+    override fun onGetFeaturesForLanguage(
+        lang: String?,
+        country: String?,
+        variant: String?,
+    ): Set<String> = setOf(TextToSpeech.Engine.KEY_FEATURE_NETWORK_SYNTHESIS)
+
+    @Suppress("DEPRECATION")
+    private fun defaultVoice(): Voice = Voice(
+        TtsLanguageSupport.VOICE_NAME,
+        Locale.SIMPLIFIED_CHINESE,
+        Voice.QUALITY_NORMAL,
+        Voice.LATENCY_NORMAL,
+        true,
+        setOf(TextToSpeech.Engine.KEY_FEATURE_NETWORK_SYNTHESIS),
+    )
 
     // ---------- 合成 ----------
 
@@ -52,12 +82,11 @@ class AggregatorTtsService : TextToSpeechService() {
         if (request == null || callback == null) return
 
         val text = request.charSequenceText?.toString().orEmpty()
-
-        // 音色：调用方指定的 Azure 风格 voiceName 优先，否则用首页设置的音色（空 = 节点默认）
+        // 音色：引擎只对外声明一个音色，实际音色统一用首页设置（空 = 节点默认）
         val settings = appContainer.settings.synthSettings.value
         // 框架的 speechRate/pitch 以 100 为基准（int 百分比），转成服务端 -100..100
         val prefs = SynthPrefs(
-            voice = request.voiceName?.takeIf { it.contains('-') } ?: settings.voice,
+            voice = settings.voice,
             rate = ((request.speechRate - 100) * 2).coerceIn(-100, 100),
             pitch = ((request.pitch - 100) * 2).coerceIn(-100, 100),
             style = settings.style,
