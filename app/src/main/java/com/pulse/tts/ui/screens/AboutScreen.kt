@@ -1,9 +1,11 @@
 package com.pulse.tts.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -82,7 +84,7 @@ fun AboutScreen(
                 }
             }
 
-            AppCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+            AppCard(contentPadding = PaddingValues(16.dp)) {
                 Text(
                     "一个「TTS 中转站聚合」客户端",
                     style = MaterialTheme.typography.titleSmall,
@@ -96,7 +98,7 @@ fun AboutScreen(
                 )
             }
 
-            AppCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+            AppCard(contentPadding = PaddingValues(16.dp)) {
                 Text(
                     "能力",
                     style = MaterialTheme.typography.titleSmall,
@@ -109,51 +111,85 @@ fun AboutScreen(
                 Capability("完整调用记录：耗时 · 音色 · 文本 · 切换链路")
             }
 
-            AppCard(
-                onClick = {
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/zuoban/tts")),
-                        )
-                    }.onFailure { onToast("无法打开浏览器：${it.message}") }
+            ProjectLinkCard(
+                title = "软件项目",
+                url = "github.com/acg-q/tts-aggregator-android",
+                description = "Pulse 客户端源码 · 问题反馈 · 版本发布",
+                onOpen = {
+                    openUrl(
+                        context,
+                        "https://github.com/acg-q/tts-aggregator-android",
+                        onToast,
+                    )
                 },
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Rounded.Link,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "项目主页",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            "github.com/zuoban/tts",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    Text(
-                        "›",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            )
+
+            ProjectLinkCard(
+                title = "TTS 项目",
+                url = "github.com/zuoban/tts",
+                description = "本应用接入的开源 TTS 中转服务",
+                onOpen = { openUrl(context, "https://github.com/zuoban/tts", onToast) },
+            )
 
             Text(
-                "MIT License · 社区客户端，与 zuoban/tts 官方无关联。部署自己的中转节点即可接入。",
+                "MIT License · Pulse 与 zuoban/tts 是相互独立的开源项目。部署自己的中转节点即可接入。",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
     }
+}
+
+@Composable
+private fun ProjectLinkCard(
+    title: String,
+    url: String,
+    description: String,
+    onOpen: () -> Unit,
+) {
+    AppCard(
+        onClick = onOpen,
+        contentPadding = PaddingValues(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Rounded.Link,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    url,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                "›",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun openUrl(context: Context, url: String, onToast: (String) -> Unit) {
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }.onFailure { onToast("无法打开浏览器：${it.message}") }
 }
 
 @Composable
