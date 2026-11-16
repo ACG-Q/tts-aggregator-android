@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.LogStore
+import com.pulse.tts.data.NETWORK_UNAVAILABLE_MESSAGE
+import com.pulse.tts.data.NetworkMonitor
+import com.pulse.tts.data.NetworkState
 import com.pulse.tts.data.NodeRepository
 import com.pulse.tts.data.SettingsStore
 import com.pulse.tts.data.TtsNode
@@ -22,11 +25,14 @@ class NodesViewModel(
     private val repo: NodeRepository,
     private val settings: SettingsStore,
     logs: LogStore,
+    private val network: NetworkState,
 ) : ViewModel() {
 
     val nodes: StateFlow<List<TtsNode>> = repo.nodes
     val callLogs = logs.logs
     val poolConfig = settings.poolConfig
+    val online: StateFlow<Boolean> = (network as? NetworkMonitor)?.online
+        ?: MutableStateFlow(network.isOnline())
 
     private val _adding = MutableStateFlow(false)
     val adding: StateFlow<Boolean> = _adding
@@ -39,6 +45,7 @@ class NodesViewModel(
 
     fun testNode(id: String, onDone: (String) -> Unit) {
         if (id in _busyNodeIds.value) return
+        if (!network.isOnline()) return onDone(NETWORK_UNAVAILABLE_MESSAGE)
         viewModelScope.launch(Dispatchers.IO) {
             _busyNodeIds.value = _busyNodeIds.value + id
             val message = try {
@@ -146,6 +153,7 @@ class NodesViewModel(
 
     fun testNodes(ids: Collection<String>, onDone: (String) -> Unit) {
         if (ids.isEmpty()) return onDone("先勾选节点")
+        if (!network.isOnline()) return onDone(NETWORK_UNAVAILABLE_MESSAGE)
         viewModelScope.launch(Dispatchers.IO) {
             _busyNodeIds.value = ids.toSet()
             val message = try {
@@ -157,6 +165,44 @@ class NodesViewModel(
                 "测试失败：${e.message ?: "未知错误"}"
             } finally {
                 _busyNodeIds.value = emptySet()
+            }
+            withContext(Dispatchers.Main) { onDone(message) }
+        }
+    }
+
+    fun testSpeed(ids: Collection<String>, onDone: (String) -> Unit) {
+        if (ids.isEmpty()) return onDone("先勾选节点")
+        if (!network.isOnline()) return onDone(NETWORK_UNAVAILABLE_MESSAGE)
+        viewModelScope.launch(Dispatchers.IO) {
+            _busyNodeIds.value = ids.toSet()
+            val message = try {
+                val results = repo.speedTest(ids.toList())
+                val ok = results.filter { it.latencyMs != null }
+                val fastest = ok.minByOrNull { it.latencyMs ?: Long.MAX_VALUE }
+                if (fastest == null) {
+                    "测速失败：${ids.size} 个节点均未成功"
+                } else {
+                    "测速完成：${ok.size}/${ids.size} 成功，最快 ${fastest.latencyMs} ms（${fastest.label}）"
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "testSpeed failed", e)
+                "测速失败：${e.message ?: "未知错误"}"
+            } finally {
+                _busyNodeIds.value = emptySet()
+            }
+            withContext(Dispatchers.Main) { onDone(message) }
+        }
+    }
+
+    fun clearCooldown(ids: Collection<String>, onDone: (String) -> Unit) {
+        if (ids.isEmpty()) return onDone("先勾选节点")
+        viewModelScope.launch(Dispatchers.IO) {
+            val message = try {
+                val count = repo.clearCooldown(ids)
+                if (count == 0) "所选节点没有冷却" else "已解除 $count 个节点的冷却"
+            } catch (e: Exception) {
+                Log.w(TAG, "clearCooldown failed", e)
+                "操作失败：${e.message ?: "未知错误"}"
             }
             withContext(Dispatchers.Main) { onDone(message) }
         }
@@ -197,14 +243,6 @@ class NodesViewModel(
         }
     }
 
-    fun addToGroup(ids: Collection<String>, onDone: (String) -> Unit) {
-        if (ids.isEmpty()) return onDone("先勾选节点")
-        settings.updatePoolConfig {
-            it.copy(groupIds = (it.groupIds + ids).distinct(), groupCursor = 0)
-        }
-        onDone("已加入轮询池：${ids.size} 个节点")
-    }
-
     fun setGroupMembers(ids: Set<String>) {
         settings.updatePoolConfig { it.copy(groupIds = ids.toList(), groupCursor = 0) }
     }
@@ -225,7 +263,7 @@ class NodesViewModel(
                         "没有新节点，跳过重复 $skipped 个"
                     } else {
                         repo.saveRawBatch(unique)
-                        if (autoTest) {
+                        if (autoTest && network.isOnline()) {
                             val addedUrls = unique.map { it.url }.toSet()
                             val addedIds = repo.nodes.value
                                 .filter { it.baseUrl in addedUrls }

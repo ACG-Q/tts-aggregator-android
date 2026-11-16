@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import com.pulse.tts.data.LogStore
+import com.pulse.tts.data.NetworkMonitor
 import com.pulse.tts.data.NodePool
 import com.pulse.tts.data.NodeRepository
 import com.pulse.tts.data.NodeStore
@@ -13,6 +14,7 @@ import com.pulse.tts.data.UpdateClient
 import com.pulse.tts.data.UpdateDownloader
 import com.pulse.tts.data.UpdateRepository
 import com.pulse.tts.data.VoiceRepository
+import com.pulse.tts.tts.SynthesisNotification
 import java.io.File
 
 /**
@@ -35,13 +37,14 @@ class AppContainer(context: Context) {
 
     // 网络层
     val api = TtsApiClient()
+    val networkMonitor = NetworkMonitor(appContext)
 
     // 仓库层
     val nodeRepository = NodeRepository(appContext, nodeStore, api)
     val voiceRepository = VoiceRepository(appContext, settings, api) { nodeRepository.nodes.value }
 
     // 调度层
-    val nodePool = NodePool(nodeRepository, settings, logStore, api)
+    val nodePool = NodePool(nodeRepository, settings, logStore, api, networkMonitor)
 
     // 更新检查
     val updateClient = UpdateClient()
@@ -64,6 +67,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        SynthesisNotification.ensureChannel(this)
     }
 }
 

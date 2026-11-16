@@ -126,12 +126,13 @@ fun NodesScreen(
     onToast: (String) -> Unit,
 ) {
     val vm: NodesViewModel = appViewModel {
-        NodesViewModel(it.nodeRepository, it.settings, it.logStore)
+        NodesViewModel(it.nodeRepository, it.settings, it.logStore, it.networkMonitor)
     }
     val context = LocalContext.current
     val appSettings = LocalAppSettings.current
     val haptics = LocalHapticFeedback.current
     val nodes by vm.nodes.collectAsState()
+    val online by vm.online.collectAsState()
     val groups = remember(nodes) { knownGroups(nodes) }
     val config by vm.poolConfig.collectAsState()
     val callLogs by vm.callLogs.collectAsState()
@@ -241,6 +242,9 @@ fun NodesScreen(
                     Hero(config.mode)
                 }
                 item {
+                    NetworkStatusRow(online = online)
+                }
+                item {
                     SummaryRow(summary.available, summary.cooling, summary.disabled)
                 }
                 item {
@@ -325,7 +329,7 @@ fun NodesScreen(
             BatchBar(
                 selectedCount = selected.size,
                 allSelected = allSelected,
-                showGroupAction = isGroupMode,
+                showClearCooldown = nodes.any { it.id in selected && it.isCoolingDown(now) },
                 showExportAction = true,
                 onSelectAll = {
                     selected = if (allSelected) emptySet() else nodes.map { it.id }.toSet()
@@ -338,8 +342,14 @@ fun NodesScreen(
                         exitSelection()
                     }
                 },
-                onGroup = {
-                    vm.addToGroup(selected) { message ->
+                onSpeed = {
+                    vm.testSpeed(selected) { message ->
+                        onToast(message)
+                        exitSelection()
+                    }
+                },
+                onClearCooldown = {
+                    vm.clearCooldown(selected) { message ->
                         onToast(message)
                         exitSelection()
                     }
@@ -447,6 +457,7 @@ fun NodesScreen(
             testing = detailNode.id in busyNodeIds,
             onDismiss = { detailId = null },
             onTest = { vm.testNode(detailNode.id, onToast) },
+            onClearCooldown = { vm.clearCooldown(listOf(detailNode.id), onToast) },
             onToggleDisabled = {
                 vm.setDisabled(detailNode.id, !detailNode.disabled, onToast)
             },
@@ -593,6 +604,41 @@ private fun Hero(mode: CallMode) {
 }
 
 @Composable
+private fun NetworkStatusRow(online: Boolean) {
+    val color = if (online) StatusColors.Ok else StatusColors.Warn
+    val text = if (online) {
+        "网络正常 · 节点调度可用"
+    } else {
+        "网络不可用 · 暂停节点切换，不消耗冷却"
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = color.copy(alpha = 0.10f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SummaryRow(available: Int, cooling: Int, disabled: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -686,10 +732,11 @@ private fun NodeCard(
     onToggleGroup: () -> Unit,
 ) {
     val state = node.uiState(now)
-    val meta = if (latencyMs != null && state == NodeState.AVAILABLE) {
-        "$latencyMs ms · ${node.group}"
-    } else {
-        "${node.statusLabel(now)} · ${node.group}"
+    val speed = node.lastSpeedMs.takeIf { it > 0 }
+    val meta = when {
+        state == NodeState.AVAILABLE && speed != null -> "测速 $speed ms · ${node.group}"
+        latencyMs != null && state == NodeState.AVAILABLE -> "$latencyMs ms · ${node.group}"
+        else -> "${node.statusLabel(now)} · ${node.group}"
     }
 
     Surface(

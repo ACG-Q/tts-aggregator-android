@@ -84,6 +84,14 @@ class NodePresentationTest {
     }
 
     @Test
+    fun speedLabel_showsLatestResultAndTime() {
+        val node = node().copy(lastSpeedMs = 320, lastSpeedAt = now - 12_000)
+
+        assertEquals("测速 320 ms · 12 秒前", node.speedLabel(now))
+        assertEquals(null, node().speedLabel(now))
+    }
+
+    @Test
     fun validateNodeDraft_rejectsBlankName() {
         assertEquals("给节点起个名字", validateNodeDraft("  ", "https://tts.example.com"))
     }

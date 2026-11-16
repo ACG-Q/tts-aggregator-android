@@ -38,6 +38,13 @@ class TtsApiClient {
         .readTimeout(6, TimeUnit.SECONDS)
         .build()
 
+    // 测速用：固定短文本，避免等待过久；失败不重试，避免把超时放大
+    private val speedHttp = OkHttpClient.Builder()
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .callTimeout(20, TimeUnit.SECONDS)
+        .build()
+
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
     // ---------- 探测 ----------
@@ -160,11 +167,34 @@ class TtsApiClient {
         return result
     }
 
+    /**
+     * 端到端短文本测速：与真实朗读一样走合成端点，计时包含网络与生成耗时。
+     * 不重试，失败返回 null；不修改节点健康度。
+     */
+    suspend fun measureSynthesisSpeed(
+        node: TtsNode,
+        text: String = SPEED_TEST_TEXT,
+    ): SpeedSample? = withContext(Dispatchers.IO) {
+        val started = System.currentTimeMillis()
+        val bytes = postSynthesize(node, text, SynthPrefs(), node.v1TtsEndpoint, speedHttp)
+            ?: postSynthesize(node, text, SynthPrefs(), node.ttsEndpoint, speedHttp)
+            ?: getSynthesize(node, text, SynthPrefs(), speedHttp)
+        if (bytes == null) {
+            Log.w(TAG, "speed test failed: ${node.baseUrl}")
+            null
+        } else {
+            SpeedSample(System.currentTimeMillis() - started, bytes.size)
+        }
+    }
+
+    data class SpeedSample(val latencyMs: Long, val bytes: Int)
+
     private suspend fun postSynthesize(
         node: TtsNode,
         text: String,
         p: SynthPrefs,
         endpoint: String,
+        client: OkHttpClient = http,
     ): ByteArray? =
         runCatching {
             val json = buildJsonObject {
@@ -176,7 +206,7 @@ class TtsApiClient {
                 if (p.style.isNotBlank()) put("style", p.style)
             }.toString().toRequestBody(jsonType)
             val url = endpoint.withApiKeyIfNeeded(node) ?: return null
-            val resp = http.newCall(Request.Builder().url(url).post(json).build()).await()
+            val resp = client.newCall(Request.Builder().url(url).post(json).build()).await()
             // 200 + 空 body 是失败：空音频会让解码器空转
             resp.use { if (it.isSuccessful) it.body?.bytes()?.takeIf { b -> b.isNotEmpty() } else null }
         }.getOrNull()
@@ -185,7 +215,12 @@ class TtsApiClient {
      * 兼容 GET 回退：不同部署参数名不一致
      * （有的只认旧参数 t=，有的只认 text=，同时发送两者覆盖全部版本）
      */
-    private suspend fun getSynthesize(node: TtsNode, text: String, p: SynthPrefs): ByteArray? =
+    private suspend fun getSynthesize(
+        node: TtsNode,
+        text: String,
+        p: SynthPrefs,
+        client: OkHttpClient = http,
+    ): ByteArray? =
         runCatching {
             val url = node.ttsEndpoint.toHttpUrlOrNull()?.newBuilder()
                 ?.addQueryParameter("text", text)
@@ -198,7 +233,7 @@ class TtsApiClient {
                     if (!node.keyless && !node.apiKey.isNullOrBlank()) addQueryParameter("api_key", node.apiKey)
                 }
                 ?.build() ?: return null
-            val resp = http.newCall(Request.Builder().url(url).get().build()).await()
+            val resp = client.newCall(Request.Builder().url(url).get().build()).await()
             resp.use { if (it.isSuccessful) it.body?.bytes()?.takeIf { b -> b.isNotEmpty() } else null }
         }.getOrNull()
 
@@ -224,6 +259,7 @@ class TtsApiClient {
         private const val TAG = "TTS-Agg"
         const val DEFAULT_VOICE = "zh-CN-XiaoxiaoNeural"
         private const val SYNTH_RETRIES = 3
+        const val SPEED_TEST_TEXT = "这是速度测试，一二三四五六七八九十。"
     }
 }
 

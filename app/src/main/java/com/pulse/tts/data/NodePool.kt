@@ -18,6 +18,7 @@ class NodePool(
     private val settings: SettingsStore,
     private val logs: LogStore,
     private val api: TtsApiClient,
+    private val network: NetworkState,
 ) {
 
     private val health = NodeHealthRegistry(
@@ -30,16 +31,26 @@ class NodePool(
     val config get() = settings.poolConfig.value
 
     /** 入口：所有朗读（首页 HTTP 朗读、系统 TTS）都走这里 */
-    suspend fun synthesize(text: String, prefs: SynthPrefs = SynthPrefs()): Result<ByteArray> {
+    suspend fun synthesize(
+        text: String,
+        prefs: SynthPrefs = SynthPrefs(),
+        onEvent: (SynthesisEvent) -> Unit = {},
+    ): Result<ByteArray> {
         repo.awaitReady()
+        if (!network.isOnline()) {
+            onEvent(SynthesisEvent.Offline)
+            return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+        }
         val nodes = repo.nodes.first()
         if (nodes.isEmpty()) {
-            return Result.failure(IllegalStateException("还没有节点：请先到 设置 → 节点管理 添加"))
+            val message = "还没有节点：请先到 设置 → 节点管理 添加"
+            onEvent(SynthesisEvent.Failed(message))
+            return Result.failure(IllegalStateException(message))
         }
         return when (config.mode) {
-            CallMode.AUTO -> auto(nodes, text, prefs)
-            CallMode.GROUP -> group(nodes, text, prefs)
-            CallMode.MANUAL -> manual(nodes, text, prefs)
+            CallMode.AUTO -> auto(nodes, text, prefs, onEvent)
+            CallMode.GROUP -> group(nodes, text, prefs, onEvent)
+            CallMode.MANUAL -> manual(nodes, text, prefs, onEvent)
         }
     }
 
@@ -55,6 +66,9 @@ class NodePool(
         attemptNo: Int,
         fromNode: String? = null,
     ): Result<ByteArray> {
+        if (!network.isOnline()) {
+            return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+        }
         val t0 = System.currentTimeMillis()
         val bytes = api.synthesize(node, text, prefs, retries = SYNTH_RETRIES_PER_NODE)
         val ms = System.currentTimeMillis() - t0
@@ -76,8 +90,13 @@ class NodePool(
             Log.i(TAG, "ok ${node.baseUrl} ${ms}ms attempt=$attemptNo")
         }
         r.onFailure {
-            val err = it.message ?: it.javaClass.simpleName
-            val state = health.onFailure(node, mode)
+            val online = network.isOnline()
+            val err = if (online) it.message ?: it.javaClass.simpleName else NETWORK_UNAVAILABLE_MESSAGE
+            val state = if (online) {
+                health.onFailure(node, mode)
+            } else {
+                AttemptState(failCount = 0, cooldownUntil = 0, triggeredCooldown = false)
+            }
             logs.insert(
                 CallLog(
                     nodeUrl = node.baseUrl, mode = mode, textLen = text.length,
@@ -91,7 +110,8 @@ class NodePool(
             )
             Log.w(TAG, "fail ${node.baseUrl} ${ms}ms: $err")
         }
-        return r
+        return if (network.isOnline()) r
+        else Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
     }
 
     // ---------- 自动：失败切换下一个 ----------
@@ -100,24 +120,61 @@ class NodePool(
         nodes: List<TtsNode>,
         text: String,
         prefs: SynthPrefs,
+        onEvent: (SynthesisEvent) -> Unit,
     ): Result<ByteArray> {
+        if (!network.isOnline()) {
+            onEvent(SynthesisEvent.Offline)
+            return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+        }
         val now = System.currentTimeMillis()
         val candidates = selectAutoCandidates(nodes, now)
         if (candidates.isEmpty()) {
             val cooling = nodes.count { it.isCoolingDown(now) }
             val msg = if (cooling > 0) "所有节点均不可用（$cooling 个冷却中）" else "没有可用节点"
-            return Result.failure(IllegalStateException("$msg，请到节点管理重新测试"))
+            val message = "$msg，请到节点管理重新测试"
+            onEvent(SynthesisEvent.Failed(message, CallMode.AUTO))
+            return Result.failure(IllegalStateException(message))
         }
 
         var prevFailed: String? = null
         candidates.forEachIndexed { idx, node ->
+            if (!network.isOnline()) {
+                onEvent(SynthesisEvent.Offline)
+                return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+            }
+            onEvent(
+                SynthesisEvent.AttemptStarted(
+                    node = node,
+                    attempt = idx + 1,
+                    total = candidates.size,
+                    mode = CallMode.AUTO,
+                    fromNode = prevFailed,
+                ),
+            )
+            val t0 = System.currentTimeMillis()
             val r = attempt(node, text, prefs, CallMode.AUTO, attemptNo = idx + 1, fromNode = prevFailed)
-            r.onSuccess { return Result.success(it) }
+            val elapsed = System.currentTimeMillis() - t0
+            r.onSuccess {
+                onEvent(SynthesisEvent.Succeeded(node, elapsed, CallMode.AUTO))
+                return Result.success(it)
+            }
+            if (!network.isOnline()) {
+                onEvent(SynthesisEvent.Offline)
+                return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+            }
+            onEvent(
+                SynthesisEvent.AttemptFailed(
+                    node = node,
+                    error = r.exceptionOrNull()?.message ?: "未知错误",
+                    willRetry = idx < candidates.lastIndex,
+                    mode = CallMode.AUTO,
+                ),
+            )
             prevFailed = node.baseUrl
         }
-        return Result.failure(
-            IllegalStateException("全部 ${candidates.size} 个节点调用失败，详见调用日志"),
-        )
+        val message = "全部 ${candidates.size} 个节点调用失败，详见调用日志"
+        onEvent(SynthesisEvent.Failed(message, CallMode.AUTO))
+        return Result.failure(IllegalStateException(message))
     }
 
     // ---------- 组：成功后轮换下一个 ----------
@@ -126,7 +183,12 @@ class NodePool(
         nodes: List<TtsNode>,
         text: String,
         prefs: SynthPrefs,
+        onEvent: (SynthesisEvent) -> Unit,
     ): Result<ByteArray> {
+        if (!network.isOnline()) {
+            onEvent(SynthesisEvent.Offline)
+            return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+        }
         val cfg = config
         val now = System.currentTimeMillis()
         // 与自动模式一致：停用节点不参与调度
@@ -136,21 +198,52 @@ class NodePool(
                 cfg.groupIds.isEmpty() -> "组内没有节点，请在 节点列表 勾选组成员"
                 else -> "组内节点全部停用/冷却，请在 节点列表 调整"
             }
+            onEvent(SynthesisEvent.Failed(msg, CallMode.GROUP))
             return Result.failure(IllegalStateException(msg))
         }
         var prevFailed: String? = null
         for (i in group.indices) {
+            if (!network.isOnline()) {
+                onEvent(SynthesisEvent.Offline)
+                return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+            }
             val idx = (cfg.groupCursor + i) % group.size
             val node = group[idx]
+            onEvent(
+                SynthesisEvent.AttemptStarted(
+                    node = node,
+                    attempt = i + 1,
+                    total = group.size,
+                    mode = CallMode.GROUP,
+                    fromNode = prevFailed,
+                ),
+            )
+            val t0 = System.currentTimeMillis()
             val r = attempt(node, text, prefs, CallMode.GROUP, attemptNo = i + 1, fromNode = prevFailed)
+            val elapsed = System.currentTimeMillis() - t0
             r.onSuccess {
+                onEvent(SynthesisEvent.Succeeded(node, elapsed, CallMode.GROUP))
                 // 成功 → 游标指向下一个（负载轮换）
                 settings.updatePoolConfig { it.copy(groupCursor = (idx + 1) % group.size) }
                 return Result.success(it)
             }
+            if (!network.isOnline()) {
+                onEvent(SynthesisEvent.Offline)
+                return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+            }
+            onEvent(
+                SynthesisEvent.AttemptFailed(
+                    node = node,
+                    error = r.exceptionOrNull()?.message ?: "未知错误",
+                    willRetry = i < group.lastIndex,
+                    mode = CallMode.GROUP,
+                ),
+            )
             prevFailed = node.baseUrl
         }
-        return Result.failure(IllegalStateException("组内 ${group.size} 个节点全部失败，详见调用日志"))
+        val message = "组内 ${group.size} 个节点全部失败，详见调用日志"
+        onEvent(SynthesisEvent.Failed(message, CallMode.GROUP))
+        return Result.failure(IllegalStateException(message))
     }
 
     // ---------- 手选：失败 3 次停止 ----------
@@ -159,32 +252,64 @@ class NodePool(
         nodes: List<TtsNode>,
         text: String,
         prefs: SynthPrefs,
+        onEvent: (SynthesisEvent) -> Unit,
     ): Result<ByteArray> {
+        if (!network.isOnline()) {
+            onEvent(SynthesisEvent.Offline)
+            return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
+        }
         val cfg = config
         if (cfg.manualFailCount >= FAIL_LIMIT) {
-            return Result.failure(
-                IllegalStateException(
-                    "手选节点已连续失败 $FAIL_LIMIT 次，调用已停止。" +
-                        "请到节点管理重新测试，或在首页更换手选节点。",
-                ),
-            )
+            val message = "手选节点已连续失败 $FAIL_LIMIT 次，调用已停止。" +
+                "请到节点管理重新测试，或在首页更换手选节点。"
+            onEvent(SynthesisEvent.Failed(message, CallMode.MANUAL))
+            return Result.failure(IllegalStateException(message))
         }
         val node = nodes.find { it.id == cfg.manualId }
-            ?: return Result.failure(IllegalStateException("尚未选择手选节点，请在 节点列表 选择"))
+            ?: run {
+                val message = "尚未选择手选节点，请在 节点列表 选择"
+                onEvent(SynthesisEvent.Failed(message, CallMode.MANUAL))
+                return Result.failure(IllegalStateException(message))
+            }
 
+        onEvent(
+            SynthesisEvent.AttemptStarted(
+                node = node,
+                attempt = cfg.manualFailCount + 1,
+                total = 1,
+                mode = CallMode.MANUAL,
+            ),
+        )
+        val t0 = System.currentTimeMillis()
         val r = attempt(node, text, prefs, CallMode.MANUAL, attemptNo = cfg.manualFailCount + 1)
+        val elapsed = System.currentTimeMillis() - t0
         if (r.isSuccess) {
+            onEvent(SynthesisEvent.Succeeded(node, elapsed, CallMode.MANUAL))
             if (cfg.manualFailCount != 0) settings.updatePoolConfig { it.copy(manualFailCount = 0) }
             return Result.success(r.getOrNull()!!)
+        }
+
+        if (!network.isOnline()) {
+            onEvent(SynthesisEvent.Offline)
+            return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
         }
 
         val fails = cfg.manualFailCount + 1
         settings.updatePoolConfig { it.copy(manualFailCount = fails) }
         val err = r.exceptionOrNull()?.message ?: "未知错误"
-        return if (fails >= FAIL_LIMIT) {
-            Result.failure(
-                IllegalStateException("手选节点连续失败 $FAIL_LIMIT 次，已停止调用：$err"),
-            )
+        val willRetry = fails < FAIL_LIMIT
+        onEvent(
+            SynthesisEvent.AttemptFailed(
+                node = node,
+                error = err,
+                willRetry = willRetry,
+                mode = CallMode.MANUAL,
+            ),
+        )
+        return if (!willRetry) {
+            val message = "手选节点连续失败 $FAIL_LIMIT 次，已停止调用：$err"
+            onEvent(SynthesisEvent.Failed(message, CallMode.MANUAL))
+            Result.failure(IllegalStateException(message))
         } else {
             Result.failure(
                 IllegalStateException("手选节点第 $fails 次失败（剩余 ${FAIL_LIMIT - fails} 次机会）：$err"),

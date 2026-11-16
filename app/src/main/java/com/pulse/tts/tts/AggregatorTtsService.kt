@@ -6,6 +6,7 @@ import android.speech.tts.SynthesisRequest
 import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeechService
 import android.speech.tts.Voice
+import android.util.Log
 import com.pulse.tts.appContainer
 import com.pulse.tts.data.SynthPrefs
 import kotlinx.coroutines.CoroutineScope
@@ -30,13 +31,17 @@ class AggregatorTtsService : TextToSpeechService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private lateinit var engine: TtsSynthesisEngine
+    private lateinit var notifier: SynthesisNotification
 
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+        notifier = SynthesisNotification(this)
         engine = TtsSynthesisEngine(
             scope = scope,
-            synthesizeAudio = { text, prefs -> appContainer.nodePool.synthesize(text, prefs) },
+            synthesizeAudio = { text, prefs, onEvent ->
+                appContainer.nodePool.synthesize(text, prefs, onEvent)
+            },
             decode = Mp3Decoder::decode,
         )
     }
@@ -92,22 +97,52 @@ class AggregatorTtsService : TextToSpeechService() {
             style = settings.style,
         )
 
-        engine.synthesize(text, prefs, CallbackSink(callback))
+        startForegroundSafely(notifier.start(text))
+        engine.synthesize(
+            text,
+            prefs,
+            CallbackSink(callback) {
+                notifier.finish()
+                stopForegroundSafely()
+            },
+            notifier::handleEvent,
+        )
     }
 
     override fun onStop() {
         // 取消合成协程：OkHttp Call 随协程取消，HTTP 下载即时中断
         engine.stop()
+        notifier.finish()
+        stopForegroundSafely()
     }
 
     override fun onDestroy() {
         isRunning = false
+        notifier.finish()
+        stopForegroundSafely()
         scope.cancel()
         super.onDestroy()
     }
 
+    private fun startForegroundSafely(notification: android.app.Notification) {
+        try {
+            startForeground(SynthesisNotification.NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            // Android 12+ 后台启动前台服务受限：退化为普通通知，不影响合成
+            Log.w(TAG, "startForeground failed, fallback to notification", e)
+            notifier.post(notification)
+        }
+    }
+
+    private fun stopForegroundSafely() {
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+    }
+
     /** 把框架的 SynthesisCallback 适配成可单测的 [SynthesisSink] */
-    private class CallbackSink(private val callback: SynthesisCallback) : SynthesisSink {
+    private class CallbackSink(
+        private val callback: SynthesisCallback,
+        private val onTerminal: () -> Unit,
+    ) : SynthesisSink {
         override val maxChunkSize: Int get() = callback.maxBufferSize.coerceAtLeast(1)
 
         override fun start(sampleRate: Int, channelCount: Int): Boolean =
@@ -122,14 +157,18 @@ class AggregatorTtsService : TextToSpeechService() {
 
         override fun done() {
             callback.done()
+            onTerminal()
         }
 
         override fun error() {
             callback.error(TextToSpeech.ERROR_SYNTHESIS)
+            onTerminal()
         }
     }
 
     companion object {
+        private const val TAG = "TTS-Agg"
+
         @Volatile
         var isRunning: Boolean = false
             private set

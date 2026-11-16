@@ -1,12 +1,16 @@
 package com.pulse.tts
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -35,10 +39,14 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var playback: PlaybackController
 
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleDeepLink(intent)
         val container = (application as App).container
+        requestNotificationPermissionIfNeeded()
         playback = PlaybackController(applicationContext, container.settings)
         playback.restoreIfNeeded()
         startLaunchProbeIfEnabled(container, isFreshLaunch = savedInstanceState == null)
@@ -112,11 +120,26 @@ class MainActivity : ComponentActivity() {
         if (!container.settings.appSettings.value.autoTestOnLaunch) return
         lifecycleScope.launch(Dispatchers.IO) {
             container.nodeRepository.awaitReady()
+            if (!container.networkMonitor.isOnline()) return@launch
             val ids = container.nodeRepository.nodes.value.map { it.id }
             if (ids.isEmpty()) return@launch
             runCatching { container.nodeRepository.probeAll(ids) }
                 .onFailure { Log.w(TAG, "launch probe failed", it) }
         }
+    }
+
+    /** Android 13+ 通知权限：只主动申请一次，拒绝后不反复弹窗。 */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val prefs = getSharedPreferences(NOTIFICATION_PREFS, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)) return
+        prefs.edit().putBoolean(KEY_NOTIFICATION_ASKED, true).apply()
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     /**
@@ -138,5 +161,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TAG = "TTS-Agg"
+        const val NOTIFICATION_PREFS = "permissions"
+        const val KEY_NOTIFICATION_ASKED = "notification_asked"
     }
 }

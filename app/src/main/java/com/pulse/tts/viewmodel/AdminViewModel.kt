@@ -3,6 +3,8 @@ package com.pulse.tts.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pulse.tts.data.NETWORK_UNAVAILABLE_MESSAGE
+import com.pulse.tts.data.NetworkState
 import com.pulse.tts.data.NodeRepository
 import com.pulse.tts.data.SettingsStore
 import com.pulse.tts.data.TtsNode
@@ -19,6 +21,7 @@ import kotlinx.coroutines.launch
 class AdminViewModel(
     private val repo: NodeRepository,
     private val settings: SettingsStore,
+    private val network: NetworkState,
 ) : ViewModel() {
 
     val nodes: StateFlow<List<TtsNode>> = repo.nodes
@@ -64,7 +67,7 @@ class AdminViewModel(
                     apiKey = apiKey?.trim()?.ifEmpty { null },
                     group = group,
                 )
-                if (autoTest) {
+                if (autoTest && network.isOnline()) {
                     repo.probeAndUpdate(node.id)
                     onDone(repo.get(node.id)?.let { summary(it) } ?: "已保存：${node.baseUrl}")
                 } else {
@@ -102,7 +105,7 @@ class AdminViewModel(
                     return@launch
                 }
                 repo.saveRawBatch(unique)
-                if (autoTest) {
+                if (autoTest && network.isOnline()) {
                     val addedUrls = unique.map { it.url }.toSet()
                     val addedIds = repo.nodes.value
                         .filter { it.baseUrl in addedUrls }
@@ -136,17 +139,6 @@ class AdminViewModel(
                 onDone("更新失败: ${e.message}")
             }
         }
-    }
-
-    fun addToGroup(ids: Collection<String>, onDone: (String) -> Unit) {
-        if (ids.isEmpty()) {
-            onDone("先勾选节点")
-            return
-        }
-        settings.updatePoolConfig {
-            it.copy(groupIds = (it.groupIds + ids).distinct(), groupCursor = 0)
-        }
-        onDone("已加入轮询池：${ids.size} 个节点")
     }
 
     fun setManual(id: String) {
@@ -205,6 +197,14 @@ class AdminViewModel(
 
     /** 批量测试指定节点（顺序执行，带进度状态） */
     fun testNodes(ids: Collection<String>, onDone: (String) -> Unit) {
+        if (ids.isEmpty()) {
+            onDone("列表为空")
+            return
+        }
+        if (!network.isOnline()) {
+            onDone(NETWORK_UNAVAILABLE_MESSAGE)
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             if (ids.isEmpty()) {
                 onDone("列表为空")
@@ -230,6 +230,10 @@ class AdminViewModel(
 
     /** 全量批量测试（并发分批，带进度回调） */
     fun testAll(onDone: (String) -> Unit) {
+        if (!network.isOnline()) {
+            onDone(NETWORK_UNAVAILABLE_MESSAGE)
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val ids = repo.nodes.value.map { it.id }
             if (ids.isEmpty()) {
@@ -248,6 +252,55 @@ class AdminViewModel(
                 _batchTesting.value = false
                 _testProgress.value = null
             }
+        }
+    }
+
+    /** 批量测速：只写最近测速字段，不触发冷却。 */
+    fun testSpeed(ids: Collection<String>, onDone: (String) -> Unit) {
+        if (ids.isEmpty()) {
+            onDone("先勾选节点")
+            return
+        }
+        if (!network.isOnline()) {
+            onDone(NETWORK_UNAVAILABLE_MESSAGE)
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            _testingIds.value = ids.toSet()
+            val message = try {
+                val results = repo.speedTest(ids.toList())
+                val ok = results.filter { it.latencyMs != null }
+                val fastest = ok.minByOrNull { it.latencyMs ?: Long.MAX_VALUE }
+                if (fastest == null) {
+                    "测速失败：${ids.size} 个节点均未成功"
+                } else {
+                    "测速完成：${ok.size}/${ids.size} 成功，最快 ${fastest.latencyMs} ms（${fastest.label}）"
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "testSpeed failed", e)
+                "测速失败：${e.message ?: "未知错误"}"
+            } finally {
+                _testingIds.value = emptySet()
+            }
+            onDone(message)
+        }
+    }
+
+    /** 手动解除冷却：清零失败计数与冷却，FAIL 改 UNKNOWN。 */
+    fun clearCooldown(ids: Collection<String>, onDone: (String) -> Unit) {
+        if (ids.isEmpty()) {
+            onDone("先勾选节点")
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val message = try {
+                val count = repo.clearCooldown(ids)
+                if (count == 0) "所选节点没有冷却" else "已解除 $count 个节点的冷却"
+            } catch (e: Exception) {
+                Log.w(TAG, "clearCooldown failed", e)
+                "操作失败：${e.message ?: "未知错误"}"
+            }
+            onDone(message)
         }
     }
 

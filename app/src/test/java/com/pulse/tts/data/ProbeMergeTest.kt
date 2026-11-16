@@ -18,6 +18,8 @@ class ProbeMergeTest {
         voiceCount: Int = 0,
         lastChecked: Long = 0,
         group: String = "默认",
+        lastSpeedMs: Long = 0,
+        lastSpeedAt: Long = 0,
     ) = TtsNode(
         id = id,
         baseUrl = "http://n",
@@ -30,10 +32,12 @@ class ProbeMergeTest {
         voiceCount = voiceCount,
         lastChecked = lastChecked,
         group = group,
+        lastSpeedMs = lastSpeedMs,
+        lastSpeedAt = lastSpeedAt,
     )
 
     @Test
-    fun `探测结果保留运行期状态与用户配置`() {
+    fun `探测成功清除冷却与失败计数并保留用户配置`() {
         val previous = node(
             id = "keep",
             label = "旧标签",
@@ -41,6 +45,8 @@ class ProbeMergeTest {
             disabled = true,
             cooldownUntil = 123,
             failCount = 2,
+            lastSpeedMs = 320,
+            lastSpeedAt = 456,
         )
         val probed = node(
             id = "new",
@@ -57,11 +63,24 @@ class ProbeMergeTest {
         assertEquals("旧标签", merged.label)
         assertEquals("k", merged.apiKey)
         assertTrue(merged.disabled)
-        assertEquals(123L, merged.cooldownUntil)
-        assertEquals(2, merged.failCount)
+        assertEquals(0L, merged.cooldownUntil)
+        assertEquals(0, merged.failCount)
         assertEquals(TtsNode.Health.OK, merged.health)
         assertEquals(7, merged.voiceCount)
         assertEquals(999L, merged.lastChecked)
+        assertEquals(320L, merged.lastSpeedMs)
+        assertEquals(456L, merged.lastSpeedAt)
+    }
+
+    @Test
+    fun `探测失败保留冷却与失败计数`() {
+        val previous = node(id = "keep", cooldownUntil = 123, failCount = 2)
+        val probed = node(id = "new", health = TtsNode.Health.FAIL)
+
+        val merged = probed.mergeProbe(previous)
+
+        assertEquals(123L, merged.cooldownUntil)
+        assertEquals(2, merged.failCount)
     }
 
     @Test
