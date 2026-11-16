@@ -1,5 +1,6 @@
 package com.pulse.tts.tts
 
+import com.pulse.tts.data.SynthesisEvent
 import com.pulse.tts.data.SynthPrefs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -33,14 +34,23 @@ internal interface SynthesisSink {
  */
 internal class TtsSynthesisEngine(
     private val scope: CoroutineScope,
-    private val synthesizeAudio: suspend (String, SynthPrefs) -> Result<ByteArray>,
+    private val synthesizeAudio: suspend (
+        text: String,
+        prefs: SynthPrefs,
+        onEvent: (SynthesisEvent) -> Unit,
+    ) -> Result<ByteArray>,
     private val decode: (ByteArray) -> Mp3Decoder.PcmResult,
 ) {
 
     private val lock = Any()
     private var job: Job? = null
 
-    fun synthesize(text: String, prefs: SynthPrefs, sink: SynthesisSink) {
+    fun synthesize(
+        text: String,
+        prefs: SynthPrefs,
+        sink: SynthesisSink,
+        onEvent: (SynthesisEvent) -> Unit = {},
+    ) {
         val newJob = scope.launch {
             if (text.isBlank()) {
                 if (sink.start(DEFAULT_SAMPLE_RATE, DEFAULT_CHANNELS)) sink.done() else sink.error()
@@ -48,7 +58,7 @@ internal class TtsSynthesisEngine(
             }
 
             val result = try {
-                synthesizeAudio(text, prefs)
+                synthesizeAudio(text, prefs, onEvent)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

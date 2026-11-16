@@ -101,7 +101,9 @@ fun AdminScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
 ) {
-    val vm: AdminViewModel = appViewModel { AdminViewModel(it.nodeRepository, it.settings) }
+    val vm: AdminViewModel = appViewModel {
+        AdminViewModel(it.nodeRepository, it.settings, it.networkMonitor)
+    }
     val nodes by vm.nodes.collectAsState()
     val testingIds by vm.testingIds.collectAsState()
     val testProgress by vm.testProgress.collectAsState()
@@ -355,7 +357,7 @@ fun AdminScreen(
                 BatchBar(
                     selectedCount = selected.size,
                     allSelected = allSelected,
-                    showGroupAction = true,
+                    showClearCooldown = nodes.any { it.id in selected && it.isCoolingDown(now) },
                     showExportAction = true,
                     onSelectAll = {
                         selected = if (allSelected) emptySet() else filteredIds
@@ -372,10 +374,24 @@ fun AdminScreen(
                             }
                         }
                     },
-                    onGroup = {
-                        vm.addToGroup(selected) { message ->
-                            onToast(message)
-                            exitSelection()
+                    onSpeed = {
+                        if (selected.isEmpty()) {
+                            onToast("先勾选节点")
+                        } else {
+                            vm.testSpeed(selected) { message ->
+                                onToast(message)
+                                exitSelection()
+                            }
+                        }
+                    },
+                    onClearCooldown = {
+                        if (selected.isEmpty()) {
+                            onToast("先勾选节点")
+                        } else {
+                            vm.clearCooldown(selected) { message ->
+                                onToast(message)
+                                exitSelection()
+                            }
                         }
                     },
                     onDisable = {
@@ -445,11 +461,12 @@ fun AdminScreen(
             isPrimary = isDetailPrimary,
             inGroup = detailNode.id in config.groupIds,
             isManual = detailNode.id == config.manualId,
-            latencyMs = null,
+            latencyMs = detailNode.lastSpeedMs.takeIf { it > 0 },
             now = now,
             testing = detailNode.id in testingIds,
             onDismiss = { detailId = null },
             onTest = { vm.testNode(detailNode.id, onToast) },
+            onClearCooldown = { vm.clearCooldown(listOf(detailNode.id), onToast) },
             onToggleDisabled = {
                 vm.setDisabled(listOf(detailNode.id), !detailNode.disabled, onDone = onToast)
             },

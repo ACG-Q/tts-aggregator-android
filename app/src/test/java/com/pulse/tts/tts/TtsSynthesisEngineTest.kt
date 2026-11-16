@@ -51,7 +51,7 @@ class TtsSynthesisEngineTest {
         var synthCalls = 0
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> synthCalls++; Result.success(byteArrayOf(1)) },
+            synthesizeAudio = { _, _, _ -> synthCalls++; Result.success(byteArrayOf(1)) },
             decode = { error("空文本不应解码") },
         )
         val sink = RecordingSink()
@@ -67,7 +67,7 @@ class TtsSynthesisEngineTest {
     fun `合成失败调用 error，不 start`() = runTest {
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> Result.failure(IllegalStateException("no node")) },
+            synthesizeAudio = { _, _, _ -> Result.failure(IllegalStateException("no node")) },
             decode = { error("失败时不应解码") },
         )
         val sink = RecordingSink()
@@ -82,7 +82,7 @@ class TtsSynthesisEngineTest {
     fun `合成抛异常调用 error，不崩溃`() = runTest {
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> throw IllegalStateException("boom") },
+            synthesizeAudio = { _, _, _ -> throw IllegalStateException("boom") },
             decode = { error("失败时不应解码") },
         )
         val sink = RecordingSink()
@@ -97,7 +97,7 @@ class TtsSynthesisEngineTest {
     fun `解码失败调用 error，不 start`() = runTest {
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> Result.success(byteArrayOf(1, 2, 3)) },
+            synthesizeAudio = { _, _, _ -> Result.success(byteArrayOf(1, 2, 3)) },
             decode = { throw IllegalStateException("bad mp3") },
         )
         val sink = RecordingSink()
@@ -112,7 +112,7 @@ class TtsSynthesisEngineTest {
     fun `start 失败调用 error`() = runTest {
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> Result.success(byteArrayOf(1)) },
+            synthesizeAudio = { _, _, _ -> Result.success(byteArrayOf(1)) },
             decode = { pcm(4) },
         )
         val sink = RecordingSink(startOk = false)
@@ -127,7 +127,7 @@ class TtsSynthesisEngineTest {
     fun `成功按 maxChunkSize 分块写入后 done`() = runTest {
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> Result.success(byteArrayOf(1)) },
+            synthesizeAudio = { _, _, _ -> Result.success(byteArrayOf(1)) },
             decode = { pcm(7) },
         )
         val sink = RecordingSink(chunkSize = 3)
@@ -143,7 +143,7 @@ class TtsSynthesisEngineTest {
     fun `写入失败调用 error，不再 done`() = runTest {
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> Result.success(byteArrayOf(1)) },
+            synthesizeAudio = { _, _, _ -> Result.success(byteArrayOf(1)) },
             decode = { pcm(9) },
         )
         val sink = RecordingSink(chunkSize = 3, writeOk = false)
@@ -159,7 +159,7 @@ class TtsSynthesisEngineTest {
         var calls = 0
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ ->
+            synthesizeAudio = { _, _, _ ->
                 if (calls++ == 0) awaitCancellation()
                 Result.success(byteArrayOf(1))
             },
@@ -182,7 +182,7 @@ class TtsSynthesisEngineTest {
         var started = false
         val engine = TtsSynthesisEngine(
             scope = this,
-            synthesizeAudio = { _, _ -> started = true; awaitCancellation() },
+            synthesizeAudio = { _, _, _ -> started = true; awaitCancellation() },
             decode = { pcm(3) },
         )
         val sink = RecordingSink()

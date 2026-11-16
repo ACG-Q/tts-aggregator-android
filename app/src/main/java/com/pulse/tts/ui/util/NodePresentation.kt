@@ -66,6 +66,10 @@ fun TtsNode.secondaryLabel(now: Long = System.currentTimeMillis()): String {
     }
 }
 
+/** 最近测速文案；未测速返回 null。 */
+fun TtsNode.speedLabel(now: Long = System.currentTimeMillis()): String? =
+    lastSpeedMs.takeIf { it > 0 }?.let { "测速 $it ms · ${relativeTimeLabel(lastSpeedAt, now)}" }
+
 fun TtsNode.badgeLabel(
     now: Long = System.currentTimeMillis(),
     isPrimary: Boolean = false,

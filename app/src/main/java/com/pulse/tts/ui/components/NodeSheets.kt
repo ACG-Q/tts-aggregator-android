@@ -79,6 +79,7 @@ fun NodeDetailSheet(
     testing: Boolean,
     onDismiss: () -> Unit,
     onTest: () -> Unit,
+    onClearCooldown: () -> Unit,
     onToggleDisabled: () -> Unit,
     onToggleGroup: () -> Unit,
     onSetManual: () -> Unit,
@@ -163,6 +164,15 @@ fun NodeDetailSheet(
                     DetailRow("上次测试", relativeTimeLabel(node.lastChecked, now))
                     DetailDivider()
                     DetailRow(
+                        "最近测速",
+                        if (node.lastSpeedMs > 0) {
+                            "${node.lastSpeedMs} ms · ${relativeTimeLabel(node.lastSpeedAt, now)}"
+                        } else {
+                            "未测速"
+                        },
+                    )
+                    DetailDivider()
+                    DetailRow(
                         "连续失败",
                         "${node.failCount} 次${if (node.isCoolingDown(now)) " · 冷却中" else ""}",
                     )
@@ -185,6 +195,15 @@ fun NodeDetailSheet(
                     icon = if (node.disabled) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
                     onClick = onToggleDisabled,
                     modifier = Modifier.weight(1f),
+                )
+            }
+            if (node.isCoolingDown(now)) {
+                Spacer(Modifier.height(8.dp))
+                DetailAction(
+                    label = "解除冷却",
+                    icon = Icons.Rounded.Refresh,
+                    onClick = onClearCooldown,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             Spacer(Modifier.height(8.dp))

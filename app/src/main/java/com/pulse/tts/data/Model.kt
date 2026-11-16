@@ -31,6 +31,8 @@ data class TtsNode(
     @SerialName("disabled") val disabled: Boolean = false,     // 用户手动禁用（不参与自动调度）
     @SerialName("group") val group: String = "默认",
     @SerialName("apiVersion") val apiVersion: ApiVersion = ApiVersion.UNKNOWN,
+    @SerialName("lastSpeedMs") val lastSpeedMs: Long = 0,      // 最近一次测速耗时（0=未测速）
+    @SerialName("lastSpeedAt") val lastSpeedAt: Long = 0,      // 最近一次测速时间戳
 ) {
     enum class Health { OK, FAIL, UNKNOWN }
 
@@ -185,7 +187,9 @@ internal fun TtsNode.mergeProbe(previous: TtsNode): TtsNode = copy(
     label = previous.label,
     apiKey = apiKey ?: previous.apiKey,
     disabled = previous.disabled,
-    cooldownUntil = previous.cooldownUntil,
-    failCount = previous.failCount,
+    cooldownUntil = if (health == TtsNode.Health.OK) 0 else previous.cooldownUntil,
+    failCount = if (health == TtsNode.Health.OK) 0 else previous.failCount,
     group = previous.group,
+    lastSpeedMs = previous.lastSpeedMs,
+    lastSpeedAt = previous.lastSpeedAt,
 )

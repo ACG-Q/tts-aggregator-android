@@ -27,13 +27,14 @@ import androidx.compose.ui.unit.dp
 fun BatchBar(
     selectedCount: Int,
     allSelected: Boolean,
-    showGroupAction: Boolean,
+    showClearCooldown: Boolean,
     showExportAction: Boolean,
     onSelectAll: () -> Unit,
     onInvert: () -> Unit,
     onExit: () -> Unit,
     onTest: () -> Unit,
-    onGroup: () -> Unit,
+    onSpeed: () -> Unit,
+    onClearCooldown: () -> Unit,
     onDisable: () -> Unit,
     onExport: () -> Unit,
     onDelete: () -> Unit,
@@ -70,10 +71,14 @@ fun BatchBar(
             Spacer(Modifier.size(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BarAction("测试", onTest, selectedCount > 0, Modifier.weight(1f))
-                if (showGroupAction) {
-                    BarAction("轮询", onGroup, selectedCount > 0, Modifier.weight(1f))
-                }
+                BarAction("测速", onSpeed, selectedCount > 0, Modifier.weight(1f))
                 BarAction("停用", onDisable, selectedCount > 0, Modifier.weight(1f))
+            }
+            Spacer(Modifier.size(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (showClearCooldown) {
+                    BarAction("解除冷却", onClearCooldown, selectedCount > 0, Modifier.weight(1f))
+                }
                 if (showExportAction) {
                     BarAction("导出", onExport, selectedCount > 0, Modifier.weight(1f))
                 }

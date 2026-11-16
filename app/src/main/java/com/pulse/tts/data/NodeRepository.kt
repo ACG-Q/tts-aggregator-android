@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import java.io.File
 
@@ -85,6 +86,31 @@ class NodeRepository(
         _nodes.update { list ->
             list.map { if (it.id in ids) it.copy(disabled = disabled) else it }
         }
+    }
+
+    /**
+     * 手动解除冷却：清零失败计数与冷却截止时间。
+     * 健康度为 FAIL 时改为 UNKNOWN，让自动模式重新把它纳入候选。
+     *
+     * @return 实际解除的节点数
+     */
+    fun clearCooldown(ids: Collection<String>): Int {
+        if (ids.isEmpty()) return 0
+        val targets = _nodes.value.filter {
+            it.id in ids &&
+                (it.cooldownUntil != 0L || it.failCount != 0 || it.health == TtsNode.Health.FAIL)
+        }
+        if (targets.isEmpty()) return 0
+        val updated = targets.map {
+            it.copy(
+                cooldownUntil = 0,
+                failCount = 0,
+                health = if (it.health == TtsNode.Health.FAIL) TtsNode.Health.UNKNOWN else it.health,
+            )
+        }
+        store.insertOrUpdateAll(updated)
+        _nodes.update { list -> updated.fold(list) { acc, node -> acc.withUpserted(node) } }
+        return updated.size
     }
 
     /**
@@ -185,7 +211,49 @@ class NodeRepository(
         return result
     }
 
-    // ---------- 一次性迁移（旧 nodes.json / 更早的 SharedPrefs） ----------
+    /**
+     * 批量测速：固定短文本真实合成，并发 [SPEED_BATCH_SIZE] 个。
+     *
+     * 只写最近测速字段，不修改健康度、失败计数或冷却，避免测速本身影响调度。
+     */
+    suspend fun speedTest(
+        ids: List<String>,
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
+    ): List<SpeedResult> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<SpeedResult>()
+        var done = 0
+        for (batch in ids.chunked(SPEED_BATCH_SIZE)) {
+            val outcomes = coroutineScope {
+                batch.map { id -> async { speedTestOne(id) } }.awaitAll()
+            }
+            val updated = outcomes.mapNotNull { it.updated }
+            if (updated.isNotEmpty()) {
+                store.insertOrUpdateAll(updated)
+                _nodes.update { list ->
+                    updated.fold(list) { acc, node -> acc.withUpserted(node) }
+                }
+            }
+            results += outcomes.map { it.result }
+            done += batch.size
+            onProgress(minOf(done, ids.size), ids.size)
+        }
+        results
+    }
+
+    private suspend fun speedTestOne(id: String): SpeedOutcome {
+        val node = get(id)
+            ?: return SpeedOutcome(SpeedResult(id, "", null, "节点不存在"), null)
+        val label = node.label.ifBlank { node.baseUrl }
+        val sample = api.measureSynthesisSpeed(node)
+            ?: return SpeedOutcome(SpeedResult(id, label, null, "测速失败"), null)
+        val updated = node.copy(
+            lastSpeedMs = sample.latencyMs,
+            lastSpeedAt = System.currentTimeMillis(),
+        )
+        return SpeedOutcome(SpeedResult(id, label, sample.latencyMs, null), updated)
+    }
+
+    private data class SpeedOutcome(val result: SpeedResult, val updated: TtsNode?)
 
     private fun migrateLegacyIfNeeded() {
         if (store.count() > 0) return
@@ -214,8 +282,17 @@ class NodeRepository(
     companion object {
         private const val TAG = "TTS-Agg"
         private const val BATCH_SIZE = 5
+        private const val SPEED_BATCH_SIZE = 3
     }
 }
+
+/** 单个节点的测速结果。 */
+data class SpeedResult(
+    val nodeId: String,
+    val label: String,
+    val latencyMs: Long?,
+    val error: String?,
+)
 
 /** 与存储层 ORDER BY 一致：健康优先，其次最近测试时间倒序。 */
 internal val NodeOrder: Comparator<TtsNode> =

@@ -36,7 +36,9 @@ class NodeStore(context: Context) :
                 cooldown_until INTEGER NOT NULL DEFAULT 0,
                 disabled INTEGER NOT NULL DEFAULT 0,
                 api_version INTEGER NOT NULL DEFAULT 2,
-                group_name TEXT NOT NULL DEFAULT '默认'
+                group_name TEXT NOT NULL DEFAULT '默认',
+                last_speed_ms INTEGER NOT NULL DEFAULT 0,
+                last_speed_at INTEGER NOT NULL DEFAULT 0
             )
             """.trimIndent(),
         )
@@ -62,6 +64,11 @@ class NodeStore(context: Context) :
             db.execSQL("ALTER TABLE nodes ADD COLUMN group_name TEXT NOT NULL DEFAULT '默认'")
             db.execSQL("CREATE INDEX idx_nodes_group ON nodes(group_name)")
         }
+        // v4 → v5：最近测速结果
+        if (oldVersion < 5) {
+            db.execSQL("ALTER TABLE nodes ADD COLUMN last_speed_ms INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE nodes ADD COLUMN last_speed_at INTEGER NOT NULL DEFAULT 0")
+        }
     }
 
     // ---------- 行 <-> 模型 ----------
@@ -81,6 +88,8 @@ class NodeStore(context: Context) :
         put("disabled", if (disabled) 1 else 0)
         put("api_version", apiVersion.ordinal)
         put("group_name", group)
+        put("last_speed_ms", lastSpeedMs)
+        put("last_speed_at", lastSpeedAt)
     }
 
     private fun Cursor.toNode(): TtsNode = TtsNode(
@@ -100,6 +109,8 @@ class NodeStore(context: Context) :
         apiVersion = ApiVersion.entries[
             getInt(getColumnIndexOrThrow("api_version")).coerceIn(0, ApiVersion.entries.size - 1)
         ],
+        lastSpeedMs = getLong(getColumnIndexOrThrow("last_speed_ms")),
+        lastSpeedAt = getLong(getColumnIndexOrThrow("last_speed_at")),
     )
 
     private fun Cursor.getStringOrNull(col: String): String? {
@@ -200,6 +211,6 @@ class NodeStore(context: Context) :
 
     companion object {
         private const val DB_NAME = "tts_nodes.db"
-        private const val DB_VERSION = 4
+        private const val DB_VERSION = 5
     }
 }
