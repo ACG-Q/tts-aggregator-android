@@ -159,8 +159,8 @@ class TtsApiClient {
      */
     suspend fun synthesize(node: TtsNode, text: String, prefs: SynthPrefs, retries: Int = SYNTH_RETRIES): ByteArray? {
         val result = retry(times = retries) {
-            postSynthesize(node, text, prefs, node.v1TtsEndpoint)
-                ?: postSynthesize(node, text, prefs, node.ttsEndpoint)
+            postAny(node, text, prefs, node.v1TtsEndpoint, http)
+                ?: postAny(node, text, prefs, node.ttsEndpoint, http)
                 ?: getSynthesize(node, text, prefs)
         }
         if (result == null) Log.w(TAG, "synthesize failed: ${node.baseUrl}")
@@ -176,8 +176,8 @@ class TtsApiClient {
         text: String = SPEED_TEST_TEXT,
     ): SpeedSample? = withContext(Dispatchers.IO) {
         val started = System.currentTimeMillis()
-        val bytes = postSynthesize(node, text, SynthPrefs(), node.v1TtsEndpoint, speedHttp)
-            ?: postSynthesize(node, text, SynthPrefs(), node.ttsEndpoint, speedHttp)
+        val bytes = postAny(node, text, SynthPrefs(), node.v1TtsEndpoint, speedHttp)
+            ?: postAny(node, text, SynthPrefs(), node.ttsEndpoint, speedHttp)
             ?: getSynthesize(node, text, SynthPrefs(), speedHttp)
         if (bytes == null) {
             Log.w(TAG, "speed test failed: ${node.baseUrl}")
@@ -189,27 +189,59 @@ class TtsApiClient {
 
     data class SpeedSample(val latencyMs: Long, val bytes: Int)
 
-    private suspend fun postSynthesize(
+    /**
+     * POST 合成：先发字符串 rate/pitch，被服务端拒绝（400/415/422）再用数字重试一次。
+     * 连接层失败不换格式重试，避免把一次故障放大成两倍等待。
+     */
+    private suspend fun postAny(
         node: TtsNode,
         text: String,
         p: SynthPrefs,
         endpoint: String,
         client: OkHttpClient = http,
-    ): ByteArray? =
-        runCatching {
-            val json = buildJsonObject {
-                put("text", text)
-                if (p.voice.isNotBlank()) put("voice", p.voice)
-                else if (node.defaultVoice.isNotBlank()) put("voice", node.defaultVoice)
-                put("rate", p.rate)
-                put("pitch", p.pitch)
-                if (p.style.isNotBlank()) put("style", p.style)
-            }.toString().toRequestBody(jsonType)
-            val url = endpoint.withApiKeyIfNeeded(node) ?: return null
-            val resp = client.newCall(Request.Builder().url(url).post(json).build()).await()
-            // 200 + 空 body 是失败：空音频会让解码器空转
-            resp.use { if (it.isSuccessful) it.body?.bytes()?.takeIf { b -> b.isNotEmpty() } else null }
-        }.getOrNull()
+    ): ByteArray? {
+        val first = postSynthesize(node, text, p, endpoint, numericRate = false, client = client)
+        when (first) {
+            is PostResult.Ok -> return first.bytes
+            PostResult.Failed -> return null
+            PostResult.Rejected -> Unit
+        }
+        val second = postSynthesize(node, text, p, endpoint, numericRate = true, client = client)
+        return (second as? PostResult.Ok)?.bytes
+    }
+
+    private suspend fun postSynthesize(
+        node: TtsNode,
+        text: String,
+        p: SynthPrefs,
+        endpoint: String,
+        numericRate: Boolean,
+        client: OkHttpClient = http,
+    ): PostResult = catchingCancellable {
+        val json = buildSynthJson(text, p, node.defaultVoice, numericRate).toRequestBody(jsonType)
+        val url = endpoint.withApiKeyIfNeeded(node) ?: return@catchingCancellable PostResult.Failed
+        val resp = client.newCall(Request.Builder().url(url).post(json).build()).await()
+        resp.use {
+            if (!it.isSuccessful) {
+                // 仅 400/415/422 可能是参数格式问题；其余状态码换格式没有意义
+                if (it.code == 400 || it.code == 415 || it.code == 422) PostResult.Rejected
+                else PostResult.Failed
+            } else {
+                // 200 + 空 body 也是失败：空音频会让解码器空转
+                it.body?.bytes()?.takeIf { b -> b.isNotEmpty() }
+                    ?.let(PostResult::Ok)
+                    ?: PostResult.Failed
+            }
+        }
+    } ?: PostResult.Failed
+
+    private sealed interface PostResult {
+        data class Ok(val bytes: ByteArray) : PostResult
+        /** 参数格式不被接受：换一种 rate/pitch 类型再试 */
+        data object Rejected : PostResult
+        /** 连接层失败：换参数类型没有意义 */
+        data object Failed : PostResult
+    }
 
     /**
      * 兼容 GET 回退：不同部署参数名不一致
@@ -221,7 +253,7 @@ class TtsApiClient {
         p: SynthPrefs,
         client: OkHttpClient = http,
     ): ByteArray? =
-        runCatching {
+        catchingCancellable {
             val url = node.ttsEndpoint.toHttpUrlOrNull()?.newBuilder()
                 ?.addQueryParameter("text", text)
                 ?.addQueryParameter("t", text)
@@ -232,10 +264,10 @@ class TtsApiClient {
                 ?.apply {
                     if (!node.keyless && !node.apiKey.isNullOrBlank()) addQueryParameter("api_key", node.apiKey)
                 }
-                ?.build() ?: return null
+                ?.build() ?: return@catchingCancellable null
             val resp = client.newCall(Request.Builder().url(url).get().build()).await()
             resp.use { if (it.isSuccessful) it.body?.bytes()?.takeIf { b -> b.isNotEmpty() } else null }
-        }.getOrNull()
+        }
 
     // ---------- 工具 ----------
 
@@ -247,12 +279,12 @@ class TtsApiClient {
 
     private suspend fun <T> retry(times: Int = 3, block: suspend () -> T?): T? {
         repeat(times - 1) { attempt ->
-            val r = runCatching { block() }.getOrNull()
+            val r = catchingCancellable(block)
             if (r != null) return r
             Log.w(TAG, "retry ${attempt + 1}/$times failed, retrying…")
             kotlinx.coroutines.delay(400L * (attempt + 1))
         }
-        return runCatching { block() }.getOrNull()
+        return catchingCancellable(block)
     }
 
     companion object {
@@ -262,6 +294,29 @@ class TtsApiClient {
         const val SPEED_TEST_TEXT = "这是速度测试，一二三四五六七八九十。"
     }
 }
+
+/**
+ * 合成请求体：rate/pitch 默认发字符串，部分部署收到数字会回 400「无效的JSON请求」。
+ * numericRate 用于兼容只认数字的旧部署。
+ */
+internal fun buildSynthJson(
+    text: String,
+    prefs: SynthPrefs,
+    defaultVoice: String,
+    numericRate: Boolean = false,
+): String = buildJsonObject {
+    put("text", text)
+    val voice = prefs.voice.ifBlank { defaultVoice }
+    if (voice.isNotBlank()) put("voice", voice)
+    if (numericRate) {
+        put("rate", prefs.rate)
+        put("pitch", prefs.pitch)
+    } else {
+        put("rate", prefs.rate.toString())
+        put("pitch", prefs.pitch.toString())
+    }
+    if (prefs.style.isNotBlank()) put("style", prefs.style)
+}.toString()
 
 /** 解析端点并仅在提供 Key 时附加认证参数（供探测等无 keyless 判定的调用使用）。 */
 internal fun authUrl(url: String, apiKey: String?): okhttp3.HttpUrl? {
