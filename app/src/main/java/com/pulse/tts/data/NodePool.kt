@@ -1,6 +1,8 @@
 package com.pulse.tts.data
 
 import android.util.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 
 /**
@@ -66,6 +68,8 @@ class NodePool(
         attemptNo: Int,
         fromNode: String? = null,
     ): Result<ByteArray> {
+        // 已取消（停止朗读 / 被新请求顶掉）时不再发请求，也不记节点失败
+        currentCoroutineContext().ensureActive()
         if (!network.isOnline()) {
             return Result.failure(IllegalStateException(NETWORK_UNAVAILABLE_MESSAGE))
         }

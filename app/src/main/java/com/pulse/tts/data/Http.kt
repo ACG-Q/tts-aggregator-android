@@ -1,5 +1,6 @@
 package com.pulse.tts.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -29,6 +30,16 @@ suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
     })
     cont.invokeOnCancellation { cancel() }
 }
+
+/** 把网络异常折叠成 null；协程取消必须继续上抛，不能算节点故障。 */
+internal suspend fun <T> catchingCancellable(block: suspend () -> T?): T? =
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
 
 /** URL 工具 */
 fun String.removeTrailingSlash(): String = trimEnd('/')
