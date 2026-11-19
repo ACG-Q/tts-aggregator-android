@@ -25,6 +25,7 @@ android {
         targetSdk = 34
         versionCode = versionCodeOf(appVersionName)
         versionName = appVersionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -99,4 +100,7 @@ dependencies {
     // 单元测试
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    // 系统 TTS 真机集成测试（仅测试期依赖，不进入 APK）
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
