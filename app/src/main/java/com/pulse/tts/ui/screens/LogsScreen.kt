@@ -54,6 +54,7 @@ import com.pulse.tts.viewmodel.LogsViewModel
 @Composable
 fun LogsScreen(
     onToast: (String) -> Unit,
+    onOpenDetail: (CallLog) -> Unit,
 ) {
     val vm: LogsViewModel = appViewModel { LogsViewModel(it.logStore, it.voiceRepository) }
     val logs by vm.logList.collectAsState()
@@ -114,7 +115,7 @@ fun LogsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(logs, key = { it.id }) { log ->
-                    LogDetailCard(log, voices)
+                    LogSummaryCard(log, voices, onClick = { onOpenDetail(log) })
                 }
             }
         }
@@ -122,8 +123,8 @@ fun LogsScreen(
 }
 
 @Composable
-private fun LogDetailCard(log: CallLog, voices: List<Voice>) {
-    AppCard {
+private fun LogSummaryCard(log: CallLog, voices: List<Voice>, onClick: () -> Unit) {
+    AppCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 formatClock(log.time),

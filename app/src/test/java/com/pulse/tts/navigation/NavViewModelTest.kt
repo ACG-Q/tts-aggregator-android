@@ -1,5 +1,7 @@
 package com.pulse.tts.navigation
 
+import com.pulse.tts.data.CallLog
+import com.pulse.tts.data.CallMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,6 +40,27 @@ class NavViewModelTest {
         assertTrue(nav.handleBack())
         assertEquals(Screen.Home, nav.screen.value)
         assertFalse(nav.handleBack())
+    }
+
+    @Test
+    fun `记录详情返回后回到记录页`() {
+        val nav = NavViewModel()
+        nav.goLogs()
+        val log = CallLog(
+            nodeUrl = "https://tts.example.com",
+            mode = CallMode.AUTO,
+            textLen = 4,
+            attempt = 1,
+            success = true,
+            latencyMs = 120,
+            textPreview = "你好世界",
+        )
+
+        nav.goLogDetail(log)
+        assertEquals(Screen.LogDetail(log), nav.screen.value)
+        assertTrue("详情页应能返回", nav.handleBack())
+        assertEquals(Screen.Logs, nav.screen.value)
+        assertEquals(MainTab.RECORDS, nav.tab.value)
     }
 
     @Test
