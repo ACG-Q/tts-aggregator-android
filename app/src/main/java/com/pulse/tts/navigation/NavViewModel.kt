@@ -1,6 +1,7 @@
 package com.pulse.tts.navigation
 
 import androidx.lifecycle.ViewModel
+import com.pulse.tts.data.CallLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -17,6 +18,7 @@ sealed class Screen {
     object Admin : Screen()
     object About : Screen()
     object LanSync : Screen()
+    data class LogDetail(val log: CallLog) : Screen()
 
     val isMain: Boolean get() = this is Home || this is Nodes || this is Logs
 }
@@ -74,10 +76,11 @@ class NavViewModel : ViewModel() {
     fun goAdmin() = push(Screen.Admin)
     fun goAbout() = push(Screen.About)
     fun goLanSync() = push(Screen.LanSync)
+    fun goLogDetail(log: CallLog) = push(Screen.LogDetail(log))
 
     private fun Screen.tabOf(): MainTab = when (this) {
         is Screen.Nodes -> MainTab.NODES
-        is Screen.Logs -> MainTab.RECORDS
+        is Screen.Logs, is Screen.LogDetail -> MainTab.RECORDS
         else -> MainTab.READ
     }
 }

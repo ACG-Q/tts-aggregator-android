@@ -20,6 +20,7 @@ import com.pulse.tts.ui.components.PulseTabBar
 import com.pulse.tts.ui.screens.AboutScreen
 import com.pulse.tts.ui.screens.AdminScreen
 import com.pulse.tts.ui.screens.HomeScreen
+import com.pulse.tts.ui.screens.LogDetailScreen
 import com.pulse.tts.ui.screens.LogsScreen
 import com.pulse.tts.ui.screens.NodesScreen
 import com.pulse.tts.ui.screens.PermissionsScreen
@@ -82,7 +83,7 @@ fun AppNav(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        when (screen) {
+        when (val current = screen) {
             is Screen.Home -> HomeScreen(
                 player = player,
                 onToast = onToast,
@@ -96,6 +97,11 @@ fun AppNav(
             )
             is Screen.Logs -> LogsScreen(
                 onToast = onToast,
+                onOpenDetail = nav::goLogDetail,
+            )
+            is Screen.LogDetail -> LogDetailScreen(
+                log = current.log,
+                onBack = { nav.handleBack() },
             )
             is Screen.Settings -> SettingsScreen(
                 onBack = { nav.handleBack() },
