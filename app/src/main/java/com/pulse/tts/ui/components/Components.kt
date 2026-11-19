@@ -2,8 +2,10 @@ package com.pulse.tts.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,10 +58,12 @@ import com.pulse.tts.ui.theme.StatusColors
 // ---------------------------------------------------------------- 卡片
 
 /** 扁平卡片（默认无点击、无描边），全站卡片外观的唯一出处 */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(14.dp),
     containerColor: Color = MaterialTheme.colorScheme.surface,
     bordered: Boolean = false,
@@ -75,7 +79,21 @@ fun AppCard(
     }
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
 
-    if (onClick != null) {
+    if (onClick != null && onLongClick != null) {
+        // 需要长按：不能让 M3 clickable Card 独占手势，否则 onLongClick 收不到事件
+        Card(
+            modifier = cardModifier.combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
+            shape = shape,
+            colors = colors,
+            border = border,
+            elevation = elevation,
+        ) {
+            Column(modifier = Modifier.padding(contentPadding), content = content)
+        }
+    } else if (onClick != null) {
         // 可点击卡片：M3 clickable Card
         Card(
             modifier = cardModifier,
