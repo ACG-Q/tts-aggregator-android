@@ -1,5 +1,6 @@
 package com.pulse.tts.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -213,6 +214,8 @@ fun NodesScreen(
     val allSelected = nodes.isNotEmpty() && selected.containsAll(nodes.map { it.id })
     val isGroupMode = config.mode == CallMode.GROUP
 
+    BackHandler(enabled = selectMode) { exitSelection() }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             NodesHeader(
@@ -300,6 +303,17 @@ fun NodesScreen(
                             inGroup = node.id in config.groupIds,
                             onClick = {
                                 if (selectMode) toggleCheck() else detailId = node.id
+                            },
+                            onLongClick = {
+                                if (appSettings.haptics) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                if (selectMode) {
+                                    toggleCheck()
+                                } else {
+                                    selectMode = true
+                                    selected = setOf(node.id)
+                                }
                             },
                             onToggleCheck = { toggleCheck() },
                             onToggleGroup = { vm.toggleGroupMember(node.id) },
@@ -699,6 +713,7 @@ private fun ModeSegmented(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NodeCard(
     node: TtsNode,
@@ -711,6 +726,7 @@ private fun NodeCard(
     showGroupToggle: Boolean,
     inGroup: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onToggleCheck: () -> Unit,
     onToggleGroup: () -> Unit,
 ) {
@@ -725,7 +741,7 @@ private fun NodeCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
