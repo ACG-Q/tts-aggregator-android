@@ -102,6 +102,7 @@ fun AppNav(
             is Screen.LogDetail -> LogDetailScreen(
                 log = current.log,
                 onBack = { nav.handleBack() },
+                onToast = onToast,
             )
             is Screen.Settings -> SettingsScreen(
                 onBack = { nav.handleBack() },
