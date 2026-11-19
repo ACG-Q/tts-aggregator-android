@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -219,7 +220,7 @@ fun LogsScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = 6.dp,
-                        bottom = if (selectMode) 140.dp else 76.dp,
+                        bottom = if (selectMode) 210.dp else 76.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -259,7 +260,11 @@ fun LogsScreen(
                     }
                 },
                 onExit = { exitSelection() },
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 64.dp),
             )
         }
     }
