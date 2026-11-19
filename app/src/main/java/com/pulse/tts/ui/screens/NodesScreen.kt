@@ -98,6 +98,7 @@ import com.pulse.tts.ui.components.EditNodeSheet
 import com.pulse.tts.ui.components.EmptyState
 import com.pulse.tts.ui.components.GroupSelectSheet
 import com.pulse.tts.ui.components.HealthTile
+import com.pulse.tts.ui.components.HeaderIcon
 import com.pulse.tts.ui.components.NodeBadge
 import com.pulse.tts.ui.components.NodeDetailSheet
 import com.pulse.tts.ui.components.NodeSelectBox
@@ -551,24 +552,6 @@ private fun NodesHeader(
             }
         },
     )
-}
-
-@Composable
-private fun HeaderIcon(
-    icon: ImageVector,
-    description: String,
-    active: Boolean = false,
-    onClick: () -> Unit,
-) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
-        Icon(
-            icon,
-            contentDescription = description,
-            modifier = Modifier.size(21.dp),
-            tint = if (active) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }
 
 @Composable
