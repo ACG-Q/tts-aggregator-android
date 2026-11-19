@@ -18,10 +18,11 @@ import java.util.Locale
 /**
  * 系统 TTS 引擎（URL TTS 实现）。
  *
- * 机制：onSynthesizeText 在 Service 工作线程调用。
+ * 机制：onSynthesizeText 在框架的合成线程调用，必须等本段写完再返回，
+ * 否则框架会立刻投递下一段，上一段仍在写入的音频会被取消。
  * 从聚合节点合成 MP3 → MediaCodec 解码为 PCM → 通过 SynthesisCallback 输出。
- * 合成/解码在独立协程里跑，不阻塞 TTS 工作线程；onStop 取消协程并中断
- * OkHttp 调用，「停止朗读」即时生效。
+ * 合成/解码在协程里跑，调用线程只做等待；onStop 取消协程并中断 OkHttp 调用，
+ * 「停止朗读」即时生效。
  *
  * 语言/音色元数据只暴露一个中文音色：默认实现会枚举全部 locale 生成几百个
  * 虚假 voice，并让默认语言与引擎实际音色不一致。
@@ -98,7 +99,9 @@ class AggregatorTtsService : TextToSpeechService() {
         )
 
         startForegroundSafely(notifier.start(text))
-        engine.synthesize(
+        // 必须等本次合成写完再返回：框架在 onSynthesizeText 返回后立即投递下一段，
+        // 提前返回会让下一段取消当前段，最终只剩最后一段有声音。
+        engine.synthesizeNow(
             text,
             prefs,
             CallbackSink(callback) {
@@ -150,7 +153,7 @@ class AggregatorTtsService : TextToSpeechService() {
                 sampleRate,
                 AudioFormat.ENCODING_PCM_16BIT,
                 channelCount,
-            ) != TextToSpeech.ERROR
+            ) == TextToSpeech.SUCCESS
 
         override fun write(pcm: ByteArray, offset: Int, length: Int): Boolean =
             callback.audioAvailable(pcm, offset, length) == TextToSpeech.SUCCESS
