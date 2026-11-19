@@ -11,10 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -22,10 +27,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.CallLog
 import com.pulse.tts.data.CallMode
+import com.pulse.tts.data.formatLogForCopy
 import com.pulse.tts.ui.components.AppCard
 import com.pulse.tts.ui.components.PulseSubHeader
 import com.pulse.tts.ui.util.formatClock
@@ -34,13 +42,15 @@ import com.pulse.tts.ui.util.voiceDisplayName
 
 /**
  * 单条调用记录详情：展示列表里被截断或未呈现的完整字段。
- * 节点地址与文本支持长按选择复制，便于排查失败原因。
+ * 节点地址与文本支持长按选择复制；底部按钮可一次复制整条记录。
  */
 @Composable
 fun LogDetailScreen(
     log: CallLog,
     onBack: () -> Unit,
+    onToast: (String) -> Unit,
 ) {
+    val clipboard = LocalClipboardManager.current
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -119,6 +129,22 @@ fun LogDetailScreen(
                         }
                     }
                 }
+            }
+
+            Button(
+                onClick = {
+                    clipboard.setText(AnnotatedString(formatLogForCopy(log)))
+                    onToast("已复制整条记录")
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    Icons.Rounded.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("复制整条记录")
             }
         }
     }
