@@ -5,7 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
 }
 
-val appVersionName = "1.0.7"
+val appVersionName = "1.0.8"
 
 fun versionCodeOf(version: String): Int {
     val parts = version.split(".")
