@@ -9,6 +9,7 @@ import android.speech.tts.Voice
 import android.util.Log
 import com.pulse.tts.appContainer
 import com.pulse.tts.data.SynthPrefs
+import com.pulse.tts.data.SynthesisEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -98,6 +99,12 @@ class AggregatorTtsService : TextToSpeechService() {
             style = settings.style,
         )
 
+        val requestId = SystemReadingSession.onRequestStarted(text)
+        val onEvent: (SynthesisEvent) -> Unit = { event ->
+            notifier.handleEvent(event)
+            SystemReadingSession.onEvent(requestId, event)
+        }
+
         startForegroundSafely(notifier.start(text))
         // 必须等本次合成写完再返回：框架在 onSynthesizeText 返回后立即投递下一段，
         // 提前返回会让下一段取消当前段，最终只剩最后一段有声音。
@@ -105,8 +112,10 @@ class AggregatorTtsService : TextToSpeechService() {
             engine.synthesizeNow(
                 text,
                 prefs,
-                CallbackSink(callback),
-                notifier::handleEvent,
+                CallbackSink(callback) { ok ->
+                    SystemReadingSession.onTerminal(requestId, ok)
+                },
+                onEvent,
             )
         } finally {
             endSynthesis()
@@ -116,6 +125,7 @@ class AggregatorTtsService : TextToSpeechService() {
     override fun onStop() {
         // 取消合成协程：OkHttp Call 随协程取消，HTTP 下载即时中断
         engine.stop()
+        SystemReadingSession.onStopped()
         endSynthesis()
     }
 
@@ -152,6 +162,7 @@ class AggregatorTtsService : TextToSpeechService() {
     /** 把框架的 SynthesisCallback 适配成可单测的 [SynthesisSink] */
     private class CallbackSink(
         private val callback: SynthesisCallback,
+        private val onTerminal: (Boolean) -> Unit,
     ) : SynthesisSink {
         override val maxChunkSize: Int get() = callback.maxBufferSize.coerceAtLeast(1)
 
@@ -167,10 +178,12 @@ class AggregatorTtsService : TextToSpeechService() {
 
         override fun done() {
             callback.done()
+            onTerminal(true)
         }
 
         override fun error() {
             callback.error(TextToSpeech.ERROR_SYNTHESIS)
+            onTerminal(false)
         }
     }
 
