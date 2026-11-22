@@ -9,18 +9,28 @@ import org.junit.Test
 class AppSettingsTest {
 
     @Test
-    fun `外观按系统浅色深色循环`() {
-        assertEquals(ThemeMode.LIGHT, ThemeMode.SYSTEM.next())
-        assertEquals(ThemeMode.DARK, ThemeMode.LIGHT.next())
-        assertEquals(ThemeMode.SYSTEM, ThemeMode.DARK.next())
-    }
-
-    @Test
     fun `跟随系统时采用系统深浅色`() {
         assertTrue(ThemeMode.SYSTEM.isDark(systemDark = true))
         assertFalse(ThemeMode.SYSTEM.isDark(systemDark = false))
         assertTrue(ThemeMode.DARK.isDark(systemDark = false))
         assertFalse(ThemeMode.LIGHT.isDark(systemDark = true))
+    }
+
+    @Test
+    fun `新主题沿用系统深浅`() {
+        assertTrue(ThemeMode.INK.isDark(systemDark = true))
+        assertFalse(ThemeMode.INK.isDark(systemDark = false))
+        assertTrue(ThemeMode.GLASS.isDark(systemDark = true))
+        assertFalse(ThemeMode.GLASS.isDark(systemDark = false))
+    }
+
+    @Test
+    fun `主题枚举可序列化往返`() {
+        val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
+        ThemeMode.entries.forEach { mode ->
+            val encoded = json.encodeToString(ThemeMode.serializer(), mode)
+            assertEquals(mode, json.decodeFromString(ThemeMode.serializer(), encoded))
+        }
     }
 
     @Test

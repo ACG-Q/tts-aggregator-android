@@ -6,12 +6,14 @@ import kotlinx.serialization.Serializable
 enum class ThemeMode {
     SYSTEM,
     LIGHT,
-    DARK;
+    DARK,
+    INK,
+    GLASS;
 
     fun next(): ThemeMode = entries[(ordinal + 1) % entries.size]
 
     fun isDark(systemDark: Boolean): Boolean = when (this) {
-        SYSTEM -> systemDark
+        SYSTEM, INK, GLASS -> systemDark
         LIGHT -> false
         DARK -> true
     }

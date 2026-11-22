@@ -631,6 +631,8 @@ private fun themeLabel(mode: ThemeMode): String = when (mode) {
     ThemeMode.SYSTEM -> "跟随系统"
     ThemeMode.LIGHT -> "浅色"
     ThemeMode.DARK -> "深色"
+    ThemeMode.INK -> "墨水屏"
+    ThemeMode.GLASS -> "液态玻璃"
 }
 
 private fun modeLabel(mode: CallMode): String = when (mode) {
