@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.pulse.tts.MainActivity
@@ -80,10 +82,17 @@ private fun formatElapsed(ms: Long): String {
 internal class SynthesisNotification(private val context: Context) {
 
     private val manager = NotificationManagerCompat.from(context)
+    private val cleanup = NotificationCleanup(
+        cancelNotification = { runCatching { manager.cancel(NOTIFICATION_ID) } },
+        schedule = { delayMs, action ->
+            Handler(Looper.getMainLooper()).postDelayed(action, delayMs)
+        },
+    )
     private var state = NotificationState(text = "")
 
     fun start(text: String): Notification {
         state = NotificationState(text = text)
+        cleanup.begin()
         return build()
     }
 
@@ -134,13 +143,14 @@ internal class SynthesisNotification(private val context: Context) {
     }
 
     fun finish() {
-        runCatching { manager.cancel(NOTIFICATION_ID) }
+        cleanup.finish()
     }
 
     private fun build(): Notification {
         val content = buildNotificationContent(state)
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_OPEN_SYSTEM_READER, true)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -169,6 +179,7 @@ internal class SynthesisNotification(private val context: Context) {
     companion object {
         const val CHANNEL_ID = "tts_system_playback"
         const val NOTIFICATION_ID = 4101
+        const val EXTRA_OPEN_SYSTEM_READER = "com.pulse.tts.extra.OPEN_SYSTEM_READER"
 
         fun ensureChannel(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
