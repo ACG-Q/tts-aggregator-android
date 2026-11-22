@@ -48,6 +48,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.ApiVersion
 import com.pulse.tts.data.TtsNode
+import com.pulse.tts.ui.theme.AppStyle
+import com.pulse.tts.ui.theme.LocalAppStyle
 import com.pulse.tts.ui.theme.StatusColors
 
 /**
@@ -69,15 +71,27 @@ fun AppCard(
     bordered: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val cardModifier = modifier.fillMaxWidth()
+    val tokens = LocalAppStyle.current
     val shape = MaterialTheme.shapes.medium
-    val colors = CardDefaults.cardColors(containerColor = containerColor)
-    val border = if (bordered) {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    } else {
-        null
+    val glass = tokens.style == AppStyle.GLASS
+    val colors = CardDefaults.cardColors(
+        containerColor = if (glass) containerColor.copy(alpha = 0.92f) else containerColor,
+    )
+    val border = when {
+        glass -> null
+        tokens.style == AppStyle.INK -> BorderStroke(
+            tokens.cardBorderWidth,
+            MaterialTheme.colorScheme.outlineVariant,
+        )
+        bordered -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        else -> null
     }
-    val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    val elevation = CardDefaults.cardElevation(
+        defaultElevation = if (glass && tokens.useShadows) 10.dp else 0.dp,
+    )
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .glassBorder(shape)
 
     if (onClick != null && onLongClick != null) {
         // 需要长按：不能让 M3 clickable Card 独占手势，否则 onLongClick 收不到事件
