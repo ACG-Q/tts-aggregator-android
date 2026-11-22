@@ -29,6 +29,7 @@ import com.pulse.tts.tts.SynthesisNotification
 import com.pulse.tts.tts.SystemReadingEntry
 import com.pulse.tts.ui.ProvideAppContainer
 import com.pulse.tts.ui.theme.AppTheme
+import com.pulse.tts.ui.theme.resolveTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -57,15 +58,23 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
-            val darkTheme = appSettings.theme.isDark(isSystemInDarkTheme())
-            AppTheme(darkTheme = darkTheme) {
+            val systemDark = isSystemInDarkTheme()
+            val resolved = resolveTheme(appSettings.theme, systemDark)
+
+            AppTheme(
+                mode = appSettings.theme,
+                systemDark = systemDark,
+                reduceMotion = appSettings.reduceMotion,
+            ) {
                 val view = LocalView.current
-                val statusBarColor = MaterialTheme.colorScheme.background
+                val barColor = MaterialTheme.colorScheme.background
                 SideEffect {
                     // XML 主题固定为浅色状态栏，应用内切换深色时需要同步，否则顶部留一条白带。
                     val window = (view.context as Activity).window
-                    window.statusBarColor = statusBarColor.toArgb()
-                    WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
+                    window.statusBarColor = barColor.toArgb()
+                    window.navigationBarColor = barColor.toArgb()
+                    WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars =
+                        !resolved.dark
                 }
                 ProvideAppContainer(appSettings) {
                     Surface(
