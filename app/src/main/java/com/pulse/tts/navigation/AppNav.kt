@@ -26,7 +26,9 @@ import com.pulse.tts.ui.screens.NodesScreen
 import com.pulse.tts.ui.screens.PermissionsScreen
 import com.pulse.tts.ui.screens.ReadingScreen
 import com.pulse.tts.ui.screens.SettingsScreen
+import com.pulse.tts.ui.screens.SystemReaderScreen
 import com.pulse.tts.ui.screens.UpdateHost
+import com.pulse.tts.tts.SystemReadingEntry
 import com.pulse.tts.data.lansync.LanSyncEntry
 import com.pulse.tts.ui.screens.picker.VoicePickerSheet
 import com.pulse.tts.ui.screens.LanSyncScreen
@@ -49,10 +51,16 @@ fun AppNav(
     val tab by nav.tab.collectAsState()
     val playback by player.state.collectAsState()
     var readerVisible by remember { mutableStateOf(false) }
+    var systemReaderVisible by remember { mutableStateOf(false) }
     var voicePickerVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(playback.isActive) {
         if (!playback.isActive) readerVisible = false
+    }
+
+    val readerOpenToken by SystemReadingEntry.openToken.collectAsState()
+    LaunchedEffect(readerOpenToken) {
+        if (readerOpenToken > 0) systemReaderVisible = true
     }
 
     LaunchedEffect(Unit) {
@@ -66,6 +74,10 @@ fun AppNav(
         dispatcher?.let { d ->
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
+                    if (systemReaderVisible) {
+                        systemReaderVisible = false
+                        return
+                    }
                     if (!nav.handleBack()) {
                         isEnabled = false
                         d.onBackPressed()
@@ -78,8 +90,12 @@ fun AppNav(
         backCallback?.let { dispatcher?.addCallback(it) }
         onDispose { backCallback?.remove() }
     }
-    LaunchedEffect(backCallback, screen, readerVisible) {
-        backCallback?.isEnabled = !screen.isMain || screen is Screen.Nodes || screen is Screen.Logs || readerVisible
+    LaunchedEffect(backCallback, screen, readerVisible, systemReaderVisible) {
+        backCallback?.isEnabled = !screen.isMain ||
+            screen is Screen.Nodes ||
+            screen is Screen.Logs ||
+            readerVisible ||
+            systemReaderVisible
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -141,6 +157,16 @@ fun AppNav(
             ReadingScreen(
                 controller = player,
                 onCollapse = { readerVisible = false },
+            )
+        }
+
+        if (systemReaderVisible) {
+            SystemReaderScreen(
+                onCollapse = { systemReaderVisible = false },
+                onOpenLogs = {
+                    systemReaderVisible = false
+                    nav.goLogs()
+                },
             )
         }
 
