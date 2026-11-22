@@ -101,30 +101,38 @@ class AggregatorTtsService : TextToSpeechService() {
         startForegroundSafely(notifier.start(text))
         // 必须等本次合成写完再返回：框架在 onSynthesizeText 返回后立即投递下一段，
         // 提前返回会让下一段取消当前段，最终只剩最后一段有声音。
-        engine.synthesizeNow(
-            text,
-            prefs,
-            CallbackSink(callback) {
-                notifier.finish()
-                stopForegroundSafely()
-            },
-            notifier::handleEvent,
-        )
+        try {
+            engine.synthesizeNow(
+                text,
+                prefs,
+                CallbackSink(callback),
+                notifier::handleEvent,
+            )
+        } finally {
+            endSynthesis()
+        }
     }
 
     override fun onStop() {
         // 取消合成协程：OkHttp Call 随协程取消，HTTP 下载即时中断
         engine.stop()
-        notifier.finish()
-        stopForegroundSafely()
+        endSynthesis()
     }
 
     override fun onDestroy() {
         isRunning = false
-        notifier.finish()
-        stopForegroundSafely()
+        endSynthesis()
         scope.cancel()
         super.onDestroy()
+    }
+
+    /**
+     * 所有结束路径的统一出口：先退出前台，再取消通知。
+     * NotificationCleanup 负责 350ms 与 2s 的兜底取消。
+     */
+    private fun endSynthesis() {
+        stopForegroundSafely()
+        notifier.finish()
     }
 
     private fun startForegroundSafely(notification: android.app.Notification) {
@@ -144,7 +152,6 @@ class AggregatorTtsService : TextToSpeechService() {
     /** 把框架的 SynthesisCallback 适配成可单测的 [SynthesisSink] */
     private class CallbackSink(
         private val callback: SynthesisCallback,
-        private val onTerminal: () -> Unit,
     ) : SynthesisSink {
         override val maxChunkSize: Int get() = callback.maxBufferSize.coerceAtLeast(1)
 
@@ -160,12 +167,10 @@ class AggregatorTtsService : TextToSpeechService() {
 
         override fun done() {
             callback.done()
-            onTerminal()
         }
 
         override fun error() {
             callback.error(TextToSpeech.ERROR_SYNTHESIS)
-            onTerminal()
         }
     }
 
