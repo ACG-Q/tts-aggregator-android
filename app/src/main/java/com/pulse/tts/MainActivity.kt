@@ -25,6 +25,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.pulse.tts.navigation.AppNav
 import com.pulse.tts.playback.PlaybackController
+import com.pulse.tts.tts.SynthesisNotification
+import com.pulse.tts.tts.SystemReadingEntry
 import com.pulse.tts.ui.ProvideAppContainer
 import com.pulse.tts.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleDeepLink(intent)
+        handleReaderIntent(intent)
         val container = (application as App).container
         requestNotificationPermissionIfNeeded()
         playback = PlaybackController(applicationContext, container.settings)
@@ -84,6 +87,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDeepLink(intent)
+        handleReaderIntent(intent)
     }
 
     override fun onStop() {
@@ -108,6 +112,13 @@ class MainActivity : ComponentActivity() {
         if (data.startsWith("pulsetts://sync", ignoreCase = true)) {
             com.pulse.tts.data.lansync.LanSyncEntry.offer(data)
         }
+    }
+
+    private fun handleReaderIntent(intent: Intent?) {
+        if (intent == null) return
+        if (!intent.getBooleanExtra(SynthesisNotification.EXTRA_OPEN_SYSTEM_READER, false)) return
+        SystemReadingEntry.requestOpen()
+        intent.removeExtra(SynthesisNotification.EXTRA_OPEN_SYSTEM_READER)
     }
 
     /**
