@@ -98,6 +98,7 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenLanSync: () -> Unit,
+    onOpenAppearance: () -> Unit,
     onToast: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -358,10 +359,10 @@ fun SettingsScreen(
                 SettingDivider()
                 ValueSettingRow(
                     title = "外观",
-                    subtitle = "跟随系统、浅色或深色",
+                    subtitle = "主题与质感",
                     icon = Icons.Rounded.Palette,
                     value = themeLabel(appSettings.theme),
-                    onClick = vm::cycleTheme,
+                    onClick = onOpenAppearance,
                 )
                 SettingDivider()
                 SwitchSettingRow(

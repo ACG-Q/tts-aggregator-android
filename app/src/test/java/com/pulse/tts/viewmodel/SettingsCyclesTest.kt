@@ -1,5 +1,6 @@
 package com.pulse.tts.viewmodel
 
+import com.pulse.tts.data.AppSettings
 import com.pulse.tts.data.AppSettingsOptions
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.ThemeMode
@@ -47,10 +48,12 @@ class SettingsCyclesTest {
     }
 
     @Test
-    fun theme_cycles_system_light_dark() {
-        assertEquals(ThemeMode.LIGHT, ThemeMode.SYSTEM.next())
-        assertEquals(ThemeMode.DARK, ThemeMode.LIGHT.next())
-        assertEquals(ThemeMode.SYSTEM, ThemeMode.DARK.next())
+    fun theme_options_list_all_modes_in_order() {
+        assertEquals(
+            listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.INK, ThemeMode.GLASS),
+            ThemeMode.entries,
+        )
+        assertEquals(ThemeMode.SYSTEM, AppSettings().theme)
     }
 
     @Test

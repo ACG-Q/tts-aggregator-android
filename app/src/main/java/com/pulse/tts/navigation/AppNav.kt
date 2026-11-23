@@ -19,6 +19,7 @@ import com.pulse.tts.playback.PlaybackController
 import com.pulse.tts.ui.components.PulseTabBar
 import com.pulse.tts.ui.screens.AboutScreen
 import com.pulse.tts.ui.screens.AdminScreen
+import com.pulse.tts.ui.screens.AppearanceScreen
 import com.pulse.tts.ui.screens.HomeScreen
 import com.pulse.tts.ui.screens.LogDetailScreen
 import com.pulse.tts.ui.screens.LogsScreen
@@ -127,7 +128,11 @@ fun AppNav(
                 onOpenAbout = nav::goAbout,
                 onOpenVoice = { voicePickerVisible = true },
                 onOpenLanSync = nav::goLanSync,
+                onOpenAppearance = nav::goAppearance,
                 onToast = onToast,
+            )
+            is Screen.Appearance -> AppearanceScreen(
+                onBack = { nav.handleBack() },
             )
             is Screen.LanSync -> LanSyncScreen(onBack = { nav.handleBack() })
             is Screen.About -> AboutScreen(
