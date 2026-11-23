@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -32,6 +33,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.pulse.tts.ui.theme.AppStyle
+import com.pulse.tts.ui.theme.LocalAppStyle
 
 @Composable
 fun ReaderStage(
@@ -43,19 +46,7 @@ fun ReaderStage(
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(Modifier.fillMaxSize()) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f),
-                                MaterialTheme.colorScheme.background,
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                            ),
-                        ),
-                    ),
-            )
+            AppBackground(Modifier.fillMaxSize())
             content()
         }
     }
@@ -97,51 +88,119 @@ fun SoundOrb(
     isPlaying: Boolean,
     reduceMotion: Boolean,
 ) {
+    val tokens = LocalAppStyle.current
+    val allowMotion = tokens.motionEnabled && !reduceMotion
     val transition = rememberInfiniteTransition(label = "orb")
     val animated by transition.animateFloat(
         initialValue = 1f,
-        targetValue = if (isPlaying && !reduceMotion) 1.035f else 1f,
+        targetValue = if (isPlaying && allowMotion) 1.035f else 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(2300),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "orb-scale",
     )
-    val pulse = if (reduceMotion) 1f else animated
+    val pulse = if (allowMotion) animated else 1f
     Box(
         modifier = Modifier
             .size(190.dp)
             .scale(pulse),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier
-                .size(190.dp)
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                    CircleShape,
-                ),
-        )
-        Box(
-            Modifier
-                .size(150.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
+        when (tokens.style) {
+            AppStyle.INK -> {
+                Box(
+                    Modifier
+                        .size(190.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(132.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.GraphicEq,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(42.dp),
+                        )
+                    }
+                }
+            }
+            AppStyle.GLASS -> {
+                Box(
+                    Modifier
+                        .size(190.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(150.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.65f),
+                                    ),
+                                ),
+                                CircleShape,
+                            )
+                            .border(
+                                1.dp,
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.9f),
+                                        Color.White.copy(alpha = 0.2f),
+                                    ),
+                                ),
+                                CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.GraphicEq,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(46.dp),
+                        )
+                    }
+                }
+            }
+            AppStyle.STANDARD -> {
+                Box(
+                    Modifier
+                        .size(190.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                            CircleShape,
                         ),
-                    ),
-                    CircleShape,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Rounded.GraphicEq,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(46.dp),
-            )
+                )
+                Box(
+                    Modifier
+                        .size(150.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary,
+                                ),
+                            ),
+                            CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.GraphicEq,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(46.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -152,10 +211,17 @@ fun ReaderChip(
     icon: @Composable () -> Unit,
     onClick: () -> Unit,
     selected: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
+    val shape = if (LocalAppStyle.current.style == AppStyle.INK) {
+        MaterialTheme.shapes.small
+    } else {
+        RoundedCornerShape(999.dp)
+    }
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(999.dp),
+        modifier = modifier.glassBorder(shape),
+        shape = shape,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer
         else MaterialTheme.colorScheme.surface,
         contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
