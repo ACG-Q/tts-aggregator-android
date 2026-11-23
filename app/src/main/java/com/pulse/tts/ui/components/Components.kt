@@ -50,7 +50,7 @@ import com.pulse.tts.data.ApiVersion
 import com.pulse.tts.data.TtsNode
 import com.pulse.tts.ui.theme.AppStyle
 import com.pulse.tts.ui.theme.LocalAppStyle
-import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.theme.LocalStatusColors
 
 /**
  * 全局通用组件：卡片 / 分区标题 / 徽章 / 芯片。
@@ -210,14 +210,18 @@ fun EmptyState(text: String, modifier: Modifier = Modifier) {
 
 // ---------------------------------------------------------------- 徽章
 
-/** 通用小徽章：着色底 + 同色字 */
+/** 通用小徽章：着色底 + 同色字；墨水屏改用描边保持零装饰 */
 @Composable
 fun Badge(text: String, color: Color, modifier: Modifier = Modifier) {
+    val tokens = LocalAppStyle.current
     Surface(
         modifier = modifier,
-        color = color.copy(alpha = 0.12f),
+        color = if (tokens.statusUsesColor) color.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surface,
         contentColor = color,
         shape = MaterialTheme.shapes.extraSmall,
+        border = if (tokens.statusUsesColor) null
+        else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Text(
             text = text,
@@ -228,24 +232,32 @@ fun Badge(text: String, color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun HealthBadge(health: TtsNode.Health, modifier: Modifier = Modifier) = when (health) {
-    TtsNode.Health.OK -> Badge("健康", StatusColors.Ok, modifier)
-    TtsNode.Health.FAIL -> Badge("异常", StatusColors.Error, modifier)
-    TtsNode.Health.UNKNOWN -> Badge("未测试", StatusColors.Muted, modifier)
+fun HealthBadge(health: TtsNode.Health, modifier: Modifier = Modifier) {
+    val status = LocalStatusColors.current
+    when (health) {
+        TtsNode.Health.OK -> Badge("健康", status.ok, modifier)
+        TtsNode.Health.FAIL -> Badge("异常", status.error, modifier)
+        TtsNode.Health.UNKNOWN -> Badge("未测试", status.muted, modifier)
+    }
 }
 
 /** Key 状态标签：免Key（蓝）/ 需Key（橙） */
 @Composable
-fun KeyBadge(keyless: Boolean, modifier: Modifier = Modifier) =
-    if (keyless) Badge("免Key", StatusColors.Info, modifier)
-    else Badge("需Key", StatusColors.Warn, modifier)
+fun KeyBadge(keyless: Boolean, modifier: Modifier = Modifier) {
+    val status = LocalStatusColors.current
+    if (keyless) Badge("免Key", status.info, modifier)
+    else Badge("需Key", status.warn, modifier)
+}
 
 /** API 世代标签：探测时识别的新老版本 */
 @Composable
-fun ApiBadge(version: ApiVersion, modifier: Modifier = Modifier) = when (version) {
-    ApiVersion.V1 -> Badge("新版V1", StatusColors.Accent, modifier)
-    ApiVersion.LEGACY -> Badge("老版", StatusColors.Warn, modifier)
-    ApiVersion.UNKNOWN -> Badge("版本未知", StatusColors.Muted, modifier)
+fun ApiBadge(version: ApiVersion, modifier: Modifier = Modifier) {
+    val status = LocalStatusColors.current
+    when (version) {
+        ApiVersion.V1 -> Badge("新版V1", status.accent, modifier)
+        ApiVersion.LEGACY -> Badge("老版", status.warn, modifier)
+        ApiVersion.UNKNOWN -> Badge("版本未知", status.muted, modifier)
+    }
 }
 
 // ---------------------------------------------------------------- 设置分组

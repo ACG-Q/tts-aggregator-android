@@ -63,7 +63,7 @@ import com.pulse.tts.tts.AggregatorTtsService
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseMainHeader
-import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.theme.LocalStatusColors
 import com.pulse.tts.ui.util.EngineStatus
 import com.pulse.tts.ui.util.engineStatus
 import com.pulse.tts.ui.util.engineStatusLabel
@@ -474,8 +474,9 @@ private fun EngineStatusPill(
     status: EngineStatus,
     onClick: () -> Unit,
 ) {
+    val statusColors = LocalStatusColors.current
     val accent = when (status) {
-        EngineStatus.ACTIVE -> StatusColors.Ok
+        EngineStatus.ACTIVE -> statusColors.ok
         EngineStatus.READY -> MaterialTheme.colorScheme.primary
         EngineStatus.DISABLED -> MaterialTheme.colorScheme.onSurfaceVariant
     }

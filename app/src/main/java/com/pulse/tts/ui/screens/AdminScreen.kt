@@ -84,7 +84,7 @@ import com.pulse.tts.ui.components.NodeSelectBox
 import com.pulse.tts.ui.components.PulseSubHeader
 import com.pulse.tts.ui.components.SelectChip
 import com.pulse.tts.ui.theme.MonoTextStyle
-import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.theme.LocalStatusColors
 import com.pulse.tts.ui.util.relativeTimeLabel
 import com.pulse.tts.ui.util.statusLabel
 import com.pulse.tts.ui.util.uiState
@@ -585,6 +585,7 @@ private fun StatsGrid(
     now: Long,
     onFilter: (NodeFilter) -> Unit,
 ) {
+    val status = LocalStatusColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -600,7 +601,7 @@ private fun StatsGrid(
         StatCell(
             label = "健康",
             count = nodes.count { NodeFilter.OK.matches(it, now) },
-            accent = StatusColors.Ok,
+            accent = status.ok,
             active = filter == NodeFilter.OK,
             onClick = { onFilter(NodeFilter.OK) },
             modifier = Modifier.weight(1f),
@@ -608,7 +609,7 @@ private fun StatsGrid(
         StatCell(
             label = "异常",
             count = nodes.count { NodeFilter.BAD.matches(it, now) },
-            accent = StatusColors.Error,
+            accent = status.error,
             active = filter == NodeFilter.BAD,
             onClick = { onFilter(NodeFilter.BAD) },
             modifier = Modifier.weight(1f),
@@ -616,7 +617,7 @@ private fun StatsGrid(
         StatCell(
             label = "停用",
             count = nodes.count { NodeFilter.DISABLED.matches(it, now) },
-            accent = StatusColors.Muted,
+            accent = status.muted,
             active = filter == NodeFilter.DISABLED,
             onClick = { onFilter(NodeFilter.DISABLED) },
             modifier = Modifier.weight(1f),

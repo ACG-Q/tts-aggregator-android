@@ -106,7 +106,7 @@ import com.pulse.tts.ui.components.NodeSelectBox
 import com.pulse.tts.ui.components.PulseIconTile
 import com.pulse.tts.ui.components.PulseMainHeader
 import com.pulse.tts.ui.theme.MonoTextStyle
-import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.theme.LocalStatusColors
 import com.pulse.tts.ui.util.NodeState
 import com.pulse.tts.ui.util.badgeLabel
 import com.pulse.tts.ui.util.nodeSummary
@@ -602,7 +602,8 @@ private fun Hero(mode: CallMode) {
 
 @Composable
 private fun NetworkStatusRow(online: Boolean) {
-    val color = if (online) StatusColors.Ok else StatusColors.Warn
+    val status = LocalStatusColors.current
+    val color = if (online) status.ok else status.warn
     val text = if (online) {
         "网络正常 · 节点调度可用"
     } else {
@@ -637,13 +638,14 @@ private fun NetworkStatusRow(online: Boolean) {
 
 @Composable
 private fun SummaryRow(available: Int, cooling: Int, disabled: Int) {
+    val status = LocalStatusColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        SummaryCell("$available", "可用", StatusColors.Ok, Modifier.weight(1f))
-        SummaryCell("$cooling", "冷却中", StatusColors.Warn, Modifier.weight(1f))
-        SummaryCell("$disabled", "已停用", StatusColors.Muted, Modifier.weight(1f))
+        SummaryCell("$available", "可用", status.ok, Modifier.weight(1f))
+        SummaryCell("$cooling", "冷却中", status.warn, Modifier.weight(1f))
+        SummaryCell("$disabled", "已停用", status.muted, Modifier.weight(1f))
     }
 }
 

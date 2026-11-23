@@ -64,7 +64,7 @@ import com.pulse.tts.ui.permissions.PermissionState
 import com.pulse.tts.ui.permissions.firstPendingIndex
 import com.pulse.tts.ui.permissions.pendingCriticalCount
 import com.pulse.tts.ui.permissions.permissionBadgeText
-import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.theme.LocalStatusColors
 import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -221,14 +221,15 @@ private fun PermissionCard(
     modifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
+    val status = LocalStatusColors.current
     val accent = when {
         state.readOnly -> MaterialTheme.colorScheme.onSurfaceVariant
-        state.granted -> StatusColors.Ok
+        state.granted -> status.ok
         else -> MaterialTheme.colorScheme.tertiary
     }
     val badgeColor = when {
         state.readOnly -> MaterialTheme.colorScheme.onSurfaceVariant
-        state.granted -> StatusColors.Ok
+        state.granted -> status.ok
         else -> MaterialTheme.colorScheme.error
     }
     AppCard(modifier = modifier) {

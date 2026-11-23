@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pulse.tts.ui.theme.StatusColors
+import com.pulse.tts.ui.theme.LocalStatusColors
 import com.pulse.tts.ui.util.NodeState
 
 @Composable
@@ -32,12 +32,13 @@ internal fun HealthTile(
     corner: Int = 11,
     iconSize: Int = 20,
 ) {
+    val status = LocalStatusColors.current
     val (tint, icon) = when (state) {
-        NodeState.AVAILABLE -> StatusColors.Ok to Icons.Rounded.Check
-        NodeState.UNTESTED -> StatusColors.Muted to Icons.AutoMirrored.Rounded.HelpOutline
-        NodeState.COOLING -> StatusColors.Warn to Icons.Rounded.Schedule
-        NodeState.FAILED -> StatusColors.Error to Icons.Rounded.Close
-        NodeState.DISABLED -> StatusColors.Muted to Icons.Rounded.Block
+        NodeState.AVAILABLE -> status.ok to Icons.Rounded.Check
+        NodeState.UNTESTED -> status.muted to Icons.AutoMirrored.Rounded.HelpOutline
+        NodeState.COOLING -> status.warn to Icons.Rounded.Schedule
+        NodeState.FAILED -> status.error to Icons.Rounded.Close
+        NodeState.DISABLED -> status.muted to Icons.Rounded.Block
     }
     Box(
         modifier = Modifier
@@ -52,11 +53,12 @@ internal fun HealthTile(
 
 @Composable
 internal fun NodeBadge(text: String) {
+    val status = LocalStatusColors.current
     val color = when (text) {
         "主用" -> MaterialTheme.colorScheme.primary
-        "冷却", "异常" -> StatusColors.Warn
-        "停用", "未测试" -> StatusColors.Muted
-        else -> StatusColors.Ok
+        "冷却", "异常" -> status.warn
+        "停用", "未测试" -> status.muted
+        else -> status.ok
     }
     Surface(
         color = color.copy(alpha = 0.12f),
