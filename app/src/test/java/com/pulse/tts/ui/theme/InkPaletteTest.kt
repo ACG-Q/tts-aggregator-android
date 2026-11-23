@@ -20,12 +20,12 @@ class InkPaletteTest {
 }
 
 private fun ColorScheme.allColors(): List<Color> = listOf(
-    primary, onPrimary, primaryContainer, onPrimaryContainer,
+    primary, onPrimary, primaryContainer, onPrimaryContainer, inversePrimary,
     secondary, onSecondary, secondaryContainer, onSecondaryContainer,
     tertiary, onTertiary, tertiaryContainer, onTertiaryContainer,
     error, onError, errorContainer, onErrorContainer,
     background, onBackground, surface, onSurface, surfaceVariant, onSurfaceVariant,
-    outline, outlineVariant,
+    outline, outlineVariant, surfaceTint, inverseSurface, inverseOnSurface,
     surfaceContainerLowest, surfaceContainerLow, surfaceContainer,
     surfaceContainerHigh, surfaceContainerHighest,
 )
