@@ -54,6 +54,11 @@ jobs:
             fi
           fi
           echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
           echo "版本：$VERSION"
 
       - name: Restore keystore
@@ -166,8 +171,13 @@ jobs:
           LINK: ${{ steps.meta.outputs.link }}
         run: |
           set -euo pipefail
-          IFS=. read -r major minor patch <<< "$VERSION"
-          VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+          IFS=. read -r major minor patch <<< "${VERSION%%-*}"
+          if [[ "$VERSION" == *-* ]]; then
+            slot="${VERSION##*.}"
+          else
+            slot=9
+          fi
+          VERSION_CODE=$(( (major * 10000 + minor * 100 + patch) * 10 + slot ))
           : > download-rows.md
           for ABI in armeabi-v7a arm64-v8a x86 x86_64 universal; do
             APK="Pulse-${TAG}-${ABI}.apk"
@@ -186,6 +196,10 @@ jobs:
           {
             echo "## Pulse ${TAG}"
             echo
+            if [[ "$VERSION" == *-* ]]; then
+              echo "> 预发布版本，供测试体验；稳定版发布后会通过应用内检查提示升级。"
+              echo
+            fi
             echo "Android 8.0+ · 已签名 APK"
             echo
             echo "### 更新内容"
@@ -220,8 +234,13 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          IFS=. read -r major minor patch <<< "$VERSION"
-          export VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+          IFS=. read -r major minor patch <<< "${VERSION%%-*}"
+          if [[ "$VERSION" == *-* ]]; then
+            slot="${VERSION##*.}"
+          else
+            slot=9
+          fi
+          export VERSION_CODE=$(( (major * 10000 + minor * 100 + patch) * 10 + slot ))
           python3 - <<'PY'
           import json
           import os
@@ -292,6 +311,7 @@ jobs:
             update.json
           name: Pulse v${{ steps.version.outputs.name }}
           body_path: release-notes.md
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
           fail_on_unmatched_files: true
 
       - name: Refresh release notes

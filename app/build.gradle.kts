@@ -8,11 +8,28 @@ plugins {
 val appVersionName = "1.0.8"
 
 fun versionCodeOf(version: String): Int {
-    val parts = version.split(".")
-    require(parts.size == 3) { "appVersionName 必须是 major.minor.patch 格式，例如 1.0.0" }
+    val separator = version.indexOf('-')
+    val base = if (separator >= 0) version.substring(0, separator) else version
+    val prerelease = if (separator >= 0) version.substring(separator + 1) else null
+
+    val parts = base.split(".")
+    require(parts.size == 3) { "appVersionName 必须是 major.minor.patch 或 major.minor.patch-beta.N 格式，例如 1.0.0" }
     val (major, minor, patch) = parts.map { it.toInt() }
     require(minor in 0..99 && patch in 0..99) { "minor 与 patch 必须小于 100" }
-    return major * 10_000 + minor * 100 + patch
+
+    // 同一版本的预发布号必须小于正式版：base*10 + (1..8)，正式版固定为 base*10 + 9
+    val slot = if (prerelease == null) {
+        9
+    } else {
+        val segments = prerelease.split(".")
+        require(segments.size == 2 && segments[0] in setOf("beta", "rc")) {
+            "预发布号必须是 beta.N 或 rc.N，N 取 1..8"
+        }
+        val index = segments[1].toIntOrNull()
+        require(index != null && index in 1..8) { "预发布序号必须取 1..8" }
+        index
+    }
+    return (major * 10_000 + minor * 100 + patch) * 10 + slot
 }
 
 android {

@@ -8,17 +8,21 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-if ($Version -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
-    throw "版本号必须是 major.minor.patch 格式，例如 1.0.1"
+if ($Version -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(beta|rc)\.([1-8]))?$') {
+    throw "版本号必须是 major.minor.patch 或 major.minor.patch-beta.N 格式，例如 1.0.1、1.1.0-beta.1"
 }
 
-$segments = $Version.Split('.')
+$isPrerelease = $Matches[4] -ne $null -and $Matches[4] -ne ''
+$baseVersion = ($Version -split '-')[0]
+$segments = $baseVersion.Split('.')
 $minor = [int]$segments[1]
 $patch = [int]$segments[2]
 if ($minor -gt 99 -or $patch -gt 99) {
-    throw "minor 与 patch 必须小于 100（versionCode = major*10000 + minor*100 + patch）"
+    throw "minor 与 patch 必须小于 100（versionCode = (major*10000 + minor*100 + patch) * 10 + 序号）"
 }
-$versionCode = [int]$segments[0] * 10000 + $minor * 100 + $patch
+# 同一版本的预发布号取 1..8，正式版固定取 9，保证预发布低于正式版
+$slot = if ($isPrerelease) { [int]$Matches[5] } else { 9 }
+$versionCode = ([int]$segments[0] * 10000 + $minor * 100 + $patch) * 10 + $slot
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $repoRoot
@@ -34,7 +38,7 @@ try {
     }
 
     $gradleFile = Join-Path $repoRoot 'app/build.gradle.kts'
-    $pattern = 'val appVersionName = "\d+\.\d+\.\d+"'
+    $pattern = 'val appVersionName = "[0-9A-Za-z.\-]+"'
     $content = [IO.File]::ReadAllText($gradleFile, [Text.Encoding]::UTF8)
     if ($content -notmatch $pattern) {
         throw "未在 app/build.gradle.kts 中找到 val appVersionName，无法更新版本号"
@@ -82,7 +86,8 @@ try {
     git push origin $tag
 
     Write-Host ""
-    Write-Host "已推送 $tag，GitHub Actions 正在构建并发布："
+    $kind = if ($isPrerelease) { '预发布（prerelease）' } else { '正式版' }
+    Write-Host "已推送 $tag（$kind），GitHub Actions 正在构建并发布："
     Write-Host "https://github.com/ACG-Q/tts-aggregator-android/actions"
     Write-Host "发布页：https://github.com/ACG-Q/tts-aggregator-android/releases/tag/$tag"
 }
