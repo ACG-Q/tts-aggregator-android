@@ -1,26 +1,33 @@
 package com.pulse.tts.ui.screens
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.pulse.tts.data.UpdateClient
 import com.pulse.tts.data.UpdateInfo
 import com.pulse.tts.ui.util.ApkInstaller
 import com.pulse.tts.viewmodel.UpdateViewModel
@@ -85,6 +92,8 @@ private fun UpdateAvailableDialog(
     onUpdate: () -> Unit,
     onExitApp: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -104,11 +113,17 @@ private fun UpdateAvailableDialog(
                     )
                     Spacer(Modifier.height(10.dp))
                 }
-                Text(
-                    "版本 v${info.versionName}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "版本 v${info.versionName}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (info.versionName.contains('-')) {
+                        Spacer(Modifier.width(6.dp))
+                        PrereleaseBadge()
+                    }
+                }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     info.notes.ifBlank { "本次更新包含功能改进与问题修复。" },
@@ -117,6 +132,16 @@ private fun UpdateAvailableDialog(
                         .verticalScroll(rememberScrollState()),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                if (!forced) {
+                    TextButton(
+                        onClick = {
+                            ApkInstaller.openReleasePage(context, UpdateClient.ALL_RELEASES_PAGE)
+                        },
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                    ) {
+                        Text("查看全部版本", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -130,6 +155,21 @@ private fun UpdateAvailableDialog(
             }
         },
     )
+}
+
+@Composable
+private fun PrereleaseBadge() {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+    ) {
+        Text(
+            "测试版",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
+    }
 }
 
 @Composable
