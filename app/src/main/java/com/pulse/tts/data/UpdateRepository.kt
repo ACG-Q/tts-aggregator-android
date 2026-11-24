@@ -46,16 +46,28 @@ class UpdateRepository(
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    /** 冷启动静默检查：节流通过时拉取清单，仅强制更新进入状态。 */
+    /** 冷启动静默检查：节流通过时拉取清单，按渠道与关闭记忆决定是否提示。 */
     suspend fun checkOnLaunch() {
         val now = System.currentTimeMillis()
         if (!shouldCheckOnLaunch(settings.readLastUpdateCheck(), now)) return
-        settings.saveLastUpdateCheck(now)
 
         val info = fetchInfo() ?: return
-        val decision = decideUpdate(currentVersionCode, info)
-        if (decision is UpdateDecision.Required) {
-            _state.update { it.copy(forced = decision.info) }
+        // 只有成功拿到清单才占用节流窗口，断网不会让下次启动白等 6 小时
+        settings.saveLastUpdateCheck(now)
+
+        val appSettings = settings.appSettings.value
+        val decision = decideLaunchUpdate(
+            currentVersionCode = currentVersionCode,
+            info = info,
+            dismissedCode = appSettings.dismissedUpdateCode,
+            dismissedAt = appSettings.dismissedUpdateAt,
+            now = now,
+        ) ?: return
+
+        when (decision) {
+            is UpdateDecision.Required -> _state.update { it.copy(forced = decision.info) }
+            is UpdateDecision.Optional -> _state.update { it.copy(optional = decision.info) }
+            UpdateDecision.UpToDate -> Unit
         }
     }
 
@@ -69,6 +81,7 @@ class UpdateRepository(
                 emit("检查更新失败，请检查网络或 GitHub 加速地址")
                 return
             }
+            settings.saveLastUpdateCheck(System.currentTimeMillis())
             when (val decision = decideUpdate(currentVersionCode, info)) {
                 is UpdateDecision.Required -> _state.update { it.copy(forced = decision.info) }
                 is UpdateDecision.Optional -> _state.update { it.copy(optional = decision.info) }
@@ -79,8 +92,24 @@ class UpdateRepository(
         }
     }
 
+    /** 关闭可选更新弹窗，并记住该版本以静默 6 小时。 */
     fun dismissOptional() {
+        val info = _state.value.optional
+        if (info != null) {
+            val at = System.currentTimeMillis()
+            settings.updateAppSettings {
+                it.copy(dismissedUpdateCode = info.versionCode, dismissedUpdateAt = at)
+            }
+        }
         _state.update { it.copy(optional = null) }
+    }
+
+    /** 切换更新渠道：保存后清空节流并立即检查一次。 */
+    suspend fun applyChannel(channel: UpdateChannel) {
+        if (settings.appSettings.value.updateChannel == channel) return
+        settings.updateAppSettings { it.copy(updateChannel = channel) }
+        settings.saveLastUpdateCheck(0L)
+        checkOnLaunch()
     }
 
     /** 下载当前弹窗对应的 APK；失败时写入 [UpdateState.downloadFailedPage]。 */
@@ -123,9 +152,27 @@ class UpdateRepository(
     }
 
     private suspend fun fetchInfo(): UpdateInfo? {
-        for (url in candidateUrls(UpdateClient.MANIFEST_URL)) {
+        if (settings.appSettings.value.updateChannel == UpdateChannel.ALL) {
+            fetchNewestFromReleases()?.let { return it }
+        }
+        return fetchWithFallback(UpdateClient.MANIFEST_URL) { client.fetch(it) }
+    }
+
+    /** 全部版本渠道：找出含 update.json 的最新几个 release，取 versionCode 最大者。 */
+    private suspend fun fetchNewestFromReleases(): UpdateInfo? {
+        val raw = fetchWithFallback(UpdateClient.RELEASES_API) { client.fetchText(it) } ?: return null
+        val candidates = selectManifestCandidates(parseReleaseList(raw))
+        val infos = candidates.mapNotNull { url ->
+            fetchWithFallback(url) { client.fetch(it) }
+        }
+        return pickNewestInfo(infos)
+    }
+
+    /** 加速地址优先、直连兜底；全部失败返回 null。 */
+    private suspend fun <T> fetchWithFallback(url: String, fetch: suspend (String) -> T): T? {
+        for (candidate in candidateUrls(url)) {
             try {
-                return client.fetch(url)
+                return fetch(candidate)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

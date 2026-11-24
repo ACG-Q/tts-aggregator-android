@@ -16,6 +16,12 @@ class UpdateClient(
 ) {
 
     suspend fun fetch(url: String): UpdateInfo {
+        val raw = fetchText(url)
+        return parseUpdateInfo(raw) ?: throw IOException("更新信息格式无效")
+    }
+
+    /** 拉取任意 GitHub 文本接口（更新清单或 Release 列表）。 */
+    suspend fun fetchText(url: String): String {
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -23,8 +29,7 @@ class UpdateClient(
             .build()
         http.newCall(request).await().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            val raw = response.body?.string().orEmpty()
-            return parseUpdateInfo(raw) ?: throw IOException("更新信息格式无效")
+            return response.body?.string().orEmpty()
         }
     }
 
@@ -33,8 +38,16 @@ class UpdateClient(
         const val MANIFEST_URL =
             "https://github.com/acg-q/tts-aggregator-android/releases/latest/download/update.json"
 
+        /** Release 列表（含预发布），供「全部版本」渠道发现 beta。 */
+        const val RELEASES_API =
+            "https://api.github.com/repos/acg-q/tts-aggregator-android/releases?per_page=30"
+
         const val RELEASE_PAGE =
             "https://github.com/acg-q/tts-aggregator-android/releases/latest"
+
+        /** 全部版本列表页，供更新弹窗跳转。 */
+        const val ALL_RELEASES_PAGE =
+            "https://github.com/acg-q/tts-aggregator-android/releases"
 
         internal const val USER_AGENT = "Pulse-Android"
 

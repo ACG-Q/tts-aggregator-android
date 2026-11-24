@@ -3,6 +3,7 @@ package com.pulse.tts.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pulse.tts.data.UpdateChannel
 import com.pulse.tts.data.UpdateRepository
 import com.pulse.tts.data.UpdateState
 import com.pulse.tts.ui.util.ApkInstaller
@@ -26,6 +27,10 @@ class UpdateViewModel(
 
     fun checkManually() {
         viewModelScope.launch { repository.checkManually() }
+    }
+
+    fun setChannel(channel: UpdateChannel) {
+        viewModelScope.launch { repository.applyChannel(channel) }
     }
 
     fun downloadAndInstall(context: Context) {
