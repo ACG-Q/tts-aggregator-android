@@ -45,7 +45,6 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -370,26 +369,10 @@ fun SettingsScreen(
                 SettingDivider()
                 ValueSettingRow(
                     title = "外观",
-                    subtitle = "主题与质感",
+                    subtitle = "主题、动效与触感",
                     icon = Icons.Rounded.Palette,
                     value = themeLabel(appSettings.theme),
                     onClick = onOpenAppearance,
-                )
-                SettingDivider()
-                SwitchSettingRow(
-                    title = "减少动态效果",
-                    subtitle = "关闭朗读页的脉动与缩放",
-                    icon = Icons.Rounded.Animation,
-                    checked = appSettings.reduceMotion,
-                    onCheckedChange = { value -> vm.updateApp { it.copy(reduceMotion = value) } },
-                )
-                SettingDivider()
-                SwitchSettingRow(
-                    title = "触感反馈",
-                    subtitle = "长按节点时轻微振动",
-                    icon = Icons.Rounded.Vibration,
-                    checked = appSettings.haptics,
-                    onCheckedChange = { value -> vm.updateApp { it.copy(haptics = value) } },
                 )
             }
 

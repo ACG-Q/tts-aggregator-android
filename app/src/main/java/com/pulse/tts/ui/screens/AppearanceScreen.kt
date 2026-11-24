@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -63,7 +64,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
         topBar = {
             PulseSubHeader(
                 title = "外观",
-                subtitle = "主题与质感",
+                subtitle = "主题、动效与触感",
                 onBack = onBack,
             )
         },
@@ -90,6 +91,26 @@ fun AppearanceScreen(onBack: () -> Unit) {
                     onClick = { vm.updateApp { it.copy(theme = mode) } },
                 )
             }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "手感",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+            )
+            ToggleRow(
+                title = "减少动态效果",
+                subtitle = "关闭朗读页的脉动与缩放",
+                checked = appSettings.reduceMotion,
+                onCheckedChange = { value -> vm.updateApp { it.copy(reduceMotion = value) } },
+            )
+            ToggleRow(
+                title = "触感反馈",
+                subtitle = "长按节点时轻微振动",
+                checked = appSettings.haptics,
+                onCheckedChange = { value -> vm.updateApp { it.copy(haptics = value) } },
+            )
         }
     }
 }
@@ -132,6 +153,37 @@ private fun ThemeRow(
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Surface(
+        onClick = { onCheckedChange(!checked) },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }
