@@ -5,6 +5,8 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,8 +27,10 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -47,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,12 +70,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.ThemeMode
+import com.pulse.tts.data.UpdateChannel
 import com.pulse.tts.data.exportNodesJson
 import com.pulse.tts.data.normalizeGithubProxy
 import com.pulse.tts.playback.ReadTuning
@@ -122,6 +131,8 @@ fun SettingsScreen(
     var showProxyInput by remember { mutableStateOf(false) }
     var proxyDraft by remember { mutableStateOf("") }
     var proxyError by remember { mutableStateOf<String?>(null) }
+    var showChannelPicker by remember { mutableStateOf(false) }
+    var showAllChannelConfirm by remember { mutableStateOf(false) }
     var permissionStates by remember { mutableStateOf(readPermissionStates(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -383,12 +394,12 @@ fun SettingsScreen(
             }
 
             SettingsSection("应用") {
-                ValueSettingRow(
-                    title = "检查更新",
-                    subtitle = "当前版本 v$version",
-                    icon = Icons.Rounded.SystemUpdate,
-                    value = if (updateState.checking) "检查中…" else "",
-                    onClick = { if (!updateState.checking) updateVm.checkManually() },
+                UpdateSettingRow(
+                    version = version,
+                    checking = updateState.checking,
+                    channel = appSettings.updateChannel,
+                    onCheck = { if (!updateState.checking) updateVm.checkManually() },
+                    onOpenChannel = { showChannelPicker = true },
                 )
                 SettingDivider()
                 ValueSettingRow(
@@ -464,6 +475,64 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearLogs = false }) { Text("取消") }
+            },
+        )
+    }
+
+    if (showChannelPicker) {
+        AlertDialog(
+            onDismissRequest = { showChannelPicker = false },
+            title = { Text("更新渠道") },
+            text = {
+                Column {
+                    ChannelOption(
+                        title = "正式版",
+                        subtitle = "只接收正式发布",
+                        selected = appSettings.updateChannel == UpdateChannel.STABLE,
+                        onClick = {
+                            showChannelPicker = false
+                            if (appSettings.updateChannel != UpdateChannel.STABLE) {
+                                updateVm.setChannel(UpdateChannel.STABLE)
+                                onToast("已切换到正式版")
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    ChannelOption(
+                        title = "全部版本",
+                        subtitle = "包含测试版构建，可能不稳定",
+                        selected = appSettings.updateChannel == UpdateChannel.ALL,
+                        onClick = {
+                            showChannelPicker = false
+                            if (appSettings.updateChannel == UpdateChannel.STABLE) {
+                                showAllChannelConfirm = true
+                            }
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showChannelPicker = false }) { Text("关闭") }
+            },
+        )
+    }
+
+    if (showAllChannelConfirm) {
+        AlertDialog(
+            onDismissRequest = { showAllChannelConfirm = false },
+            title = { Text("切换到全部版本？") },
+            text = { Text("将同时接收测试版构建，可能不稳定或存在缺陷。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAllChannelConfirm = false
+                        updateVm.setChannel(UpdateChannel.ALL)
+                        onToast("已切换到全部版本，正在检查更新")
+                    },
+                ) { Text("切换") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAllChannelConfirm = false }) { Text("取消") }
             },
         )
     }
@@ -626,6 +695,98 @@ private fun StepperSettingRow(
             }
         },
     )
+}
+
+@Composable
+private fun UpdateSettingRow(
+    version: String,
+    checking: Boolean,
+    channel: UpdateChannel,
+    onCheck: () -> Unit,
+    onOpenChannel: () -> Unit,
+) {
+    SettingRowLayout(
+        icon = Icons.Rounded.SystemUpdate,
+        title = "检查更新",
+        subtitle = if (checking) "正在检查更新…" else "当前版本 v$version",
+        onClick = onCheck,
+        trailing = {
+            Surface(
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics {
+                        contentDescription = "更新渠道，当前${channelLabel(channel)}，点按更换"
+                    }
+                    .clickable(onClick = onOpenChannel),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        channelLabel(channel),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Icon(
+                        Icons.Rounded.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun ChannelOption(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (selected) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = "已选择",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+private fun channelLabel(channel: UpdateChannel): String = when (channel) {
+    UpdateChannel.STABLE -> "正式版"
+    UpdateChannel.ALL -> "全部版本"
 }
 
 private fun themeLabel(mode: ThemeMode): String = when (mode) {
