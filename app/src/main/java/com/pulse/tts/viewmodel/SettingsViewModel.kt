@@ -72,6 +72,11 @@ class SettingsViewModel(
 
     fun cycleMode() = settings.updatePoolConfig { it.copy(mode = it.mode.nextMode()) }
 
+    /** 托盘直接选档位，0 表示关闭；未知值归到关闭。 */
+    fun setSleep(minutes: Int) = updateApp {
+        it.copy(sleepMinutes = minutes.coerceAtLeast(0))
+    }
+
     fun setMode(mode: CallMode) = settings.updatePoolConfig { it.copy(mode = mode) }
 
     fun clearLogs() = logs.clear()

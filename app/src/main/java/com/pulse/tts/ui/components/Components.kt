@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -277,36 +278,57 @@ fun SettingGroup(
     }
 }
 
-/** 组内分隔线：左侧对齐到文字起点（14 + 34 + 14） */
+/** 组内分隔线：与行内文字起点对齐（14dp 卡片内边距） */
 @Composable
 fun SettingDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(start = 62.dp, end = 14.dp),
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp),
         thickness = 1.dp,
         color = MaterialTheme.colorScheme.outlineVariant,
     )
 }
 
-/** 设置行骨架：图标 + 标题/副标题 + 自定义尾部，普通行与步进器行共用 */
+/**
+ * 设置行骨架：单色图标 + 标题/副标题 + 自定义尾部，普通行与步进器行共用。
+ *
+ * 标题与副标题固定纵向排列（Column），不允许用 Row 把两者并排。
+ * [onLongClick] 用于「同一行承担主操作 + 次要设置」的场景，例如检查更新：
+ * 点击执行检查，长按切换渠道。
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingRowLayout(
     icon: ImageVector,
     title: String,
     subtitle: String?,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.primary,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     trailing: @Composable (RowScope.() -> Unit)? = null,
 ) {
+    val gesture = when {
+        onClick != null && onLongClick != null -> Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+        onClick != null -> Modifier.clickable(onClick = onClick)
+        else -> Modifier
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(gesture)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PulseIconTile(icon = icon, tint = tint, size = 34)
-        Spacer(Modifier.width(14.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             if (subtitle != null) {
@@ -514,14 +536,14 @@ fun PulseBrandMark(modifier: Modifier = Modifier, size: Int = 56) {
     }
 }
 
-/** 设置入口行：图标方块 + 标题/副标题 + 箭头（需放在 SettingGroup 内） */
+/** 设置入口行：单色图标 + 标题/副标题 + 箭头（需放在 SettingGroup 内） */
 @Composable
 fun SettingRow(
     title: String,
     subtitle: String? = null,
     icon: ImageVector,
     onClick: () -> Unit,
-    tint: Color = MaterialTheme.colorScheme.primary,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     SettingRowLayout(
@@ -534,10 +556,11 @@ fun SettingRow(
             if (trailing != null) {
                 trailing()
             } else {
-                Text(
-                    "›",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(16.dp),
                 )
             }
         },

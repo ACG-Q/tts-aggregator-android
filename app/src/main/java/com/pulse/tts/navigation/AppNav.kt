@@ -23,6 +23,7 @@ import com.pulse.tts.ui.screens.AppearanceScreen
 import com.pulse.tts.ui.screens.HomeScreen
 import com.pulse.tts.ui.screens.LogDetailScreen
 import com.pulse.tts.ui.screens.LogsScreen
+import com.pulse.tts.ui.screens.MoreSettingsScreen
 import com.pulse.tts.ui.screens.NodesScreen
 import com.pulse.tts.ui.screens.PermissionsScreen
 import com.pulse.tts.ui.screens.ReadingScreen
@@ -125,10 +126,15 @@ fun AppNav(
                 onBack = { nav.handleBack() },
                 onOpenPermissions = nav::goPermissions,
                 onOpenAdmin = nav::goAdmin,
-                onOpenAbout = nav::goAbout,
                 onOpenVoice = { voicePickerVisible = true },
                 onOpenLanSync = nav::goLanSync,
                 onOpenAppearance = nav::goAppearance,
+                onOpenMoreSettings = nav::goMoreSettings,
+                onToast = onToast,
+            )
+            is Screen.MoreSettings -> MoreSettingsScreen(
+                onBack = { nav.handleBack() },
+                onOpenAbout = nav::goAbout,
                 onToast = onToast,
             )
             is Screen.Appearance -> AppearanceScreen(
