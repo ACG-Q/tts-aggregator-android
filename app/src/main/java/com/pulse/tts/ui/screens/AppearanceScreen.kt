@@ -2,6 +2,7 @@ package com.pulse.tts.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,19 +12,25 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Animation
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,25 +38,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.pulse.tts.data.ThemeMode
+import com.pulse.tts.data.ThemeSkin
+import com.pulse.tts.data.ThemeStyle
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseSubHeader
+import com.pulse.tts.ui.components.SettingDivider
+import com.pulse.tts.ui.components.SettingSection
+import com.pulse.tts.ui.components.SettingSwitchRow
 import com.pulse.tts.ui.theme.DarkColors
 import com.pulse.tts.ui.theme.GlassDarkColors
 import com.pulse.tts.ui.theme.GlassLightColors
 import com.pulse.tts.ui.theme.InkDarkColors
 import com.pulse.tts.ui.theme.InkLightColors
 import com.pulse.tts.ui.theme.LightColors
+import com.pulse.tts.ui.theme.LocalAppStyle
 import com.pulse.tts.ui.theme.ThemePalette
 import com.pulse.tts.ui.theme.resolveTheme
+import com.pulse.tts.ui.theme.skinLabel
+import com.pulse.tts.ui.theme.styleLabel
+import com.pulse.tts.ui.theme.themeSummary
 import com.pulse.tts.viewmodel.SettingsViewModel
 
 /**
- * 外观页：主题选择 + 实时预览。
+ * 外观页：样式与主题两个独立维度 + 实时预览。
  *
- * 跟随系统 / 浅色 / 深色 / 墨水屏 / 液态玻璃 五种模式，
- * 墨水屏与玻璃各自带明暗两套色板，明暗跟随系统深浅。
+ * 样式决定明暗（跟随系统 / 浅色 / 深色），主题决定视觉风格（常规 / 墨水屏 / 液态玻璃）。
+ * 两个维度可任意组合，颜色与动效的最终结果通过 [resolveTheme] 统一计算。
  */
 @Composable
 fun AppearanceScreen(onBack: () -> Unit) {
@@ -58,13 +75,16 @@ fun AppearanceScreen(onBack: () -> Unit) {
     }
     val appSettings by vm.appSettings.collectAsState()
     val systemDark = isSystemInDarkTheme()
+    val style = appSettings.themeStyle
+    val skin = appSettings.themeSkin
+    val resolved = resolveTheme(style, skin, systemDark)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             PulseSubHeader(
                 title = "外观",
-                subtitle = "主题、动效与触感",
+                subtitle = "样式、主题与手感",
                 onBack = onBack,
             )
         },
@@ -74,116 +94,111 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 8.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.Top,
         ) {
             PreviewCard(
-                palette = resolveTheme(appSettings.theme, systemDark).palette,
-                title = themeLabel(appSettings.theme),
-                subtitle = themeHint(appSettings.theme, systemDark),
+                palette = resolved.palette,
+                title = themeSummary(style, skin),
+                subtitle = themeHint(style, skin, systemDark),
             )
 
-            ThemeMode.entries.forEach { mode ->
-                ThemeRow(
-                    mode = mode,
-                    selected = appSettings.theme == mode,
-                    systemDark = systemDark,
-                    onClick = { vm.updateApp { it.copy(theme = mode) } },
-                )
+            SettingSection("样式") {
+                ThemeStyle.entries.forEachIndexed { index, entry ->
+                    if (index > 0) SettingDivider()
+                    AppearanceChoiceRow(
+                        leading = {
+                            Icon(
+                                styleIcon(entry),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        title = styleLabel(entry),
+                        subtitle = styleHint(entry, systemDark),
+                        selected = style == entry,
+                        onClick = { vm.updateApp { it.copy(themeStyle = entry) } },
+                    )
+                }
             }
 
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "手感",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, top = 6.dp),
-            )
-            ToggleRow(
-                title = "减少动态效果",
-                subtitle = "关闭朗读页的脉动与缩放",
-                checked = appSettings.reduceMotion,
-                onCheckedChange = { value -> vm.updateApp { it.copy(reduceMotion = value) } },
-            )
-            ToggleRow(
-                title = "触感反馈",
-                subtitle = "长按节点时轻微振动",
-                checked = appSettings.haptics,
-                onCheckedChange = { value -> vm.updateApp { it.copy(haptics = value) } },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThemeRow(
-    mode: ThemeMode,
-    selected: Boolean,
-    systemDark: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PaletteSwatch(resolveTheme(mode, systemDark).palette, Modifier.size(44.dp))
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp),
-            ) {
-                Text(themeLabel(mode), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    themeHint(mode, systemDark),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            SettingSection("主题") {
+                ThemeSkin.entries.forEachIndexed { index, entry ->
+                    if (index > 0) SettingDivider()
+                    AppearanceChoiceRow(
+                        leading = {
+                            PaletteSwatch(
+                                palette = skinPalette(entry, resolved.dark),
+                                modifier = Modifier.size(40.dp),
+                            )
+                        },
+                        title = skinLabel(entry),
+                        subtitle = skinHint(entry),
+                        selected = skin == entry,
+                        onClick = { vm.updateApp { it.copy(themeSkin = entry) } },
+                    )
+                }
             }
-            if (selected) {
-                Icon(
-                    Icons.Rounded.Check,
-                    contentDescription = "已选择",
-                    tint = MaterialTheme.colorScheme.primary,
+
+            SettingSection("手感") {
+                SettingSwitchRow(
+                    icon = Icons.Rounded.Animation,
+                    title = "减少动态效果",
+                    subtitle = "关闭朗读页的脉动与缩放",
+                    checked = appSettings.reduceMotion,
+                    onCheckedChange = { value -> vm.updateApp { it.copy(reduceMotion = value) } },
+                )
+                SettingDivider()
+                SettingSwitchRow(
+                    icon = Icons.Rounded.TouchApp,
+                    title = "触感反馈",
+                    subtitle = "长按节点时轻微振动",
+                    checked = appSettings.haptics,
+                    onCheckedChange = { value -> vm.updateApp { it.copy(haptics = value) } },
                 )
             }
         }
     }
 }
 
+/** 与设置首页一致的行结构：40dp 前导槽 + 标题/副标题纵向排列 + 选中勾 */
 @Composable
-private fun ToggleRow(
+private fun AppearanceChoiceRow(
+    leading: @Composable () -> Unit,
     title: String,
     subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    selected: Boolean,
+    onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = { onCheckedChange(!checked) },
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            leading()
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (selected) {
+            Icon(
+                Icons.Rounded.Check,
+                contentDescription = "已选择",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
@@ -191,6 +206,14 @@ private fun ToggleRow(
 @Composable
 private fun PreviewCard(palette: ThemePalette, title: String, subtitle: String) {
     val colors = paletteColors(palette)
+    val useGradients = LocalAppStyle.current.useGradients
+    val background = if (useGradients) {
+        Brush.verticalGradient(
+            listOf(colors.secondaryContainer, colors.background, colors.primaryContainer),
+        )
+    } else {
+        SolidColor(colors.background)
+    }
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = colors.surface,
@@ -201,11 +224,7 @@ private fun PreviewCard(palette: ThemePalette, title: String, subtitle: String) 
         Box(
             Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(colors.secondaryContainer, colors.background, colors.primaryContainer),
-                    ),
-                )
+                .background(background)
                 .padding(18.dp),
         ) {
             Column {
@@ -278,6 +297,36 @@ private fun PaletteSwatch(palette: ThemePalette, modifier: Modifier = Modifier) 
     }
 }
 
+private fun styleIcon(style: ThemeStyle): ImageVector = when (style) {
+    ThemeStyle.SYSTEM -> Icons.Rounded.BrightnessAuto
+    ThemeStyle.LIGHT -> Icons.Rounded.LightMode
+    ThemeStyle.DARK -> Icons.Rounded.DarkMode
+}
+
+private fun styleHint(style: ThemeStyle, systemDark: Boolean): String = when (style) {
+    ThemeStyle.SYSTEM -> "当前为${if (systemDark) "深色" else "浅色"}"
+    ThemeStyle.LIGHT -> "始终使用明亮界面"
+    ThemeStyle.DARK -> "始终使用深色界面"
+}
+
+private fun skinHint(skin: ThemeSkin): String = when (skin) {
+    ThemeSkin.NORMAL -> "简洁的冷灰背景"
+    ThemeSkin.INK -> "单像素描边，自动关闭动效"
+    ThemeSkin.GLASS -> "分层玻璃与模糊效果"
+}
+
+private fun themeHint(style: ThemeStyle, skin: ThemeSkin, systemDark: Boolean): String = when (skin) {
+    ThemeSkin.NORMAL -> if (style.isDark(systemDark)) "常规 · 深色界面" else "常规 · 浅色界面"
+    ThemeSkin.INK -> "墨水屏 · 单像素描边，动效已关闭"
+    ThemeSkin.GLASS -> "液态玻璃 · 分层与模糊"
+}
+
+private fun skinPalette(skin: ThemeSkin, dark: Boolean): ThemePalette = when (skin) {
+    ThemeSkin.NORMAL -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
+    ThemeSkin.INK -> if (dark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT
+    ThemeSkin.GLASS -> if (dark) ThemePalette.GLASS_DARK else ThemePalette.GLASS_LIGHT
+}
+
 private fun paletteColors(palette: ThemePalette) = when (palette) {
     ThemePalette.LIGHT -> LightColors
     ThemePalette.DARK -> DarkColors
@@ -285,20 +334,4 @@ private fun paletteColors(palette: ThemePalette) = when (palette) {
     ThemePalette.INK_DARK -> InkDarkColors
     ThemePalette.GLASS_LIGHT -> GlassLightColors
     ThemePalette.GLASS_DARK -> GlassDarkColors
-}
-
-private fun themeLabel(mode: ThemeMode): String = when (mode) {
-    ThemeMode.SYSTEM -> "跟随系统"
-    ThemeMode.LIGHT -> "浅色"
-    ThemeMode.DARK -> "深色"
-    ThemeMode.INK -> "墨水屏"
-    ThemeMode.GLASS -> "液态玻璃"
-}
-
-private fun themeHint(mode: ThemeMode, systemDark: Boolean): String = when (mode) {
-    ThemeMode.SYSTEM -> "当前为${if (systemDark) "深色" else "浅色"}"
-    ThemeMode.LIGHT -> "明亮冷灰底"
-    ThemeMode.DARK -> "OLED 深蓝黑"
-    ThemeMode.INK -> "自动关闭动效，状态用文字与图标区分"
-    ThemeMode.GLASS -> "关键页面应用分层玻璃"
 }

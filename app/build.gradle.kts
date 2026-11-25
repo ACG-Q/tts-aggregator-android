@@ -7,6 +7,12 @@ plugins {
 
 val appVersionName = "1.1.0-beta.2"
 
+/** 默认主题：-PpulseDefaultTheme=ink 打默认墨水屏的包（只影响首次安装） */
+val defaultInkTheme = providers.gradleProperty("pulseDefaultTheme")
+    .map { it.equals("ink", ignoreCase = true) }
+    .orElse(false)
+    .get()
+
 fun versionCodeOf(version: String): Int {
     val separator = version.indexOf('-')
     val base = if (separator >= 0) version.substring(0, separator) else version
@@ -43,6 +49,7 @@ android {
         versionCode = versionCodeOf(appVersionName)
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("boolean", "DEFAULT_INK_THEME", defaultInkTheme.toString())
     }
 
     buildFeatures {

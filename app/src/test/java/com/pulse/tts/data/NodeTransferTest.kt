@@ -68,7 +68,7 @@ class NodeTransferTest {
         val json = exportNodesJson(
             nodes = listOf(TtsNode(baseUrl = "https://a")),
             config = AppSettings(
-                theme = ThemeMode.DARK,
+                themeStyle = ThemeStyle.DARK,
                 cooldownMinutes = 30,
                 failThreshold = 5,
                 sleepMinutes = 15,
@@ -80,7 +80,7 @@ class NodeTransferTest {
 
         assertEquals(1, bundle.drafts.size)
         val restored = requireNotNull(bundle.settings)
-        assertEquals(ThemeMode.DARK, restored.theme)
+        assertEquals(ThemeStyle.DARK, restored.themeStyle)
         assertEquals(30, restored.cooldownMinutes)
         assertEquals(5, restored.failThreshold)
         assertEquals(15, restored.sleepMinutes)

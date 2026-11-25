@@ -5,39 +5,40 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.pulse.tts.data.ThemeMode
+import com.pulse.tts.data.ThemeSkin
+import com.pulse.tts.data.ThemeStyle
 
 /** 视觉风格：标准、墨水屏、液态玻璃。 */
 internal enum class AppStyle { STANDARD, INK, GLASS }
 
-/** 具体色板；墨水屏与玻璃各自带明暗两套，跟随系统深浅切换。 */
+/** 具体色板；墨水屏与玻璃各自带明暗两套，跟随样式切换。 */
 internal enum class ThemePalette { LIGHT, DARK, INK_LIGHT, INK_DARK, GLASS_LIGHT, GLASS_DARK }
 
-/** 主题模式的解析结果：风格 + 实际深浅 + 色板。 */
+/** 主题的解析结果：风格 + 实际深浅 + 色板。 */
 internal data class ResolvedTheme(
     val style: AppStyle,
     val dark: Boolean,
     val palette: ThemePalette,
 )
 
-internal fun resolveTheme(mode: ThemeMode, systemDark: Boolean): ResolvedTheme = when (mode) {
-    ThemeMode.SYSTEM -> ResolvedTheme(
-        AppStyle.STANDARD,
-        systemDark,
-        if (systemDark) ThemePalette.DARK else ThemePalette.LIGHT,
-    )
-    ThemeMode.LIGHT -> ResolvedTheme(AppStyle.STANDARD, false, ThemePalette.LIGHT)
-    ThemeMode.DARK -> ResolvedTheme(AppStyle.STANDARD, true, ThemePalette.DARK)
-    ThemeMode.INK -> ResolvedTheme(
-        AppStyle.INK,
-        systemDark,
-        if (systemDark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT,
-    )
-    ThemeMode.GLASS -> ResolvedTheme(
-        AppStyle.GLASS,
-        systemDark,
-        if (systemDark) ThemePalette.GLASS_DARK else ThemePalette.GLASS_LIGHT,
-    )
+/** 样式决定明暗，主题决定风格；两者独立组合。 */
+internal fun resolveTheme(
+    style: ThemeStyle,
+    skin: ThemeSkin,
+    systemDark: Boolean,
+): ResolvedTheme {
+    val dark = style.isDark(systemDark)
+    val appStyle = when (skin) {
+        ThemeSkin.NORMAL -> AppStyle.STANDARD
+        ThemeSkin.INK -> AppStyle.INK
+        ThemeSkin.GLASS -> AppStyle.GLASS
+    }
+    val palette = when (skin) {
+        ThemeSkin.NORMAL -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
+        ThemeSkin.INK -> if (dark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT
+        ThemeSkin.GLASS -> if (dark) ThemePalette.GLASS_DARK else ThemePalette.GLASS_LIGHT
+    }
+    return ResolvedTheme(appStyle, dark, palette)
 }
 
 /** 风格 token：动效、渐变、阴影、描边与状态色表现。 */

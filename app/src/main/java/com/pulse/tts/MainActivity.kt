@@ -59,10 +59,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
             val systemDark = isSystemInDarkTheme()
-            val resolved = resolveTheme(appSettings.theme, systemDark)
+            val resolved = resolveTheme(appSettings.themeStyle, appSettings.themeSkin, systemDark)
 
             AppTheme(
-                mode = appSettings.theme,
+                style = appSettings.themeStyle,
+                skin = appSettings.themeSkin,
                 systemDark = systemDark,
                 reduceMotion = appSettings.reduceMotion,
             ) {

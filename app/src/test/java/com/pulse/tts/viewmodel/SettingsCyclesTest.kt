@@ -3,7 +3,8 @@ package com.pulse.tts.viewmodel
 import com.pulse.tts.data.AppSettings
 import com.pulse.tts.data.AppSettingsOptions
 import com.pulse.tts.data.CallMode
-import com.pulse.tts.data.ThemeMode
+import com.pulse.tts.data.ThemeDefaults
+import com.pulse.tts.data.ThemeStyle
 import com.pulse.tts.playback.ReadTuning
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -48,12 +49,9 @@ class SettingsCyclesTest {
     }
 
     @Test
-    fun theme_options_list_all_modes_in_order() {
-        assertEquals(
-            listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.INK, ThemeMode.GLASS),
-            ThemeMode.entries,
-        )
-        assertEquals(ThemeMode.SYSTEM, AppSettings().theme)
+    fun theme_dimensions_default_to_system_and_build_skin() {
+        assertEquals(ThemeStyle.SYSTEM, AppSettings().themeStyle)
+        assertEquals(ThemeDefaults.skin, AppSettings().themeSkin)
     }
 
     @Test

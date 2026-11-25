@@ -110,6 +110,36 @@ jobs:
           done
           ls -l Pulse-v${VERSION}-*.apk
 
+      - name: Build ink-default release
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease -PpulseDefaultTheme=ink
+
+      - name: Verify and rename ink APKs
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          APK_DIR=app/build/outputs/apk/release
+          COUNT=$(find "$APK_DIR" -maxdepth 1 -name '*.apk' | wc -l)
+          if [ "$COUNT" -ne 5 ]; then
+            echo "::error::预期 5 个墨水屏默认 APK，实际 $COUNT 个"
+            exit 1
+          fi
+          for ABI in armeabi-v7a arm64-v8a x86 x86_64 universal; do
+            SRC="$APK_DIR/app-${ABI}-release.apk"
+            if [ ! -f "$SRC" ]; then
+              echo "::error::缺少 $SRC"
+              exit 1
+            fi
+            "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "$SRC"
+            cp "$SRC" "Pulse-v${VERSION}-${ABI}-ink.apk"
+          done
+          ls -l Pulse-v${VERSION}-*-ink.apk
+
       - name: Compute release range
         id: meta
         env:
@@ -179,6 +209,7 @@ jobs:
           fi
           VERSION_CODE=$(( (major * 10000 + minor * 100 + patch) * 10 + slot ))
           : > download-rows.md
+          : > ink-rows.md
           for ABI in armeabi-v7a arm64-v8a x86 x86_64 universal; do
             APK="Pulse-${TAG}-${ABI}.apk"
             BYTES=$(stat -c%s "$APK")
@@ -186,6 +217,14 @@ jobs:
             SHA=$(sha256sum "$APK" | awk '{print $1}')
             sha256sum "$APK" > "${APK}.sha256"
             printf '| `%s` | %s | %s | `%s` |\n' "$APK" "$ABI" "$SIZE" "$SHA" >> download-rows.md
+          done
+          for ABI in armeabi-v7a arm64-v8a x86 x86_64 universal; do
+            APK="Pulse-${TAG}-${ABI}-ink.apk"
+            BYTES=$(stat -c%s "$APK")
+            SIZE=$(awk -v b="$BYTES" 'BEGIN { printf "%.1f MB", b / 1048576 }')
+            SHA=$(sha256sum "$APK" | awk '{print $1}')
+            sha256sum "$APK" > "${APK}.sha256"
+            printf '| `%s` | %s | %s | `%s` |\n' "$APK" "$ABI" "$SIZE" "$SHA" >> ink-rows.md
           done
 
           CHANGELOG=$(sed -e '/./,$!d' changelog.md)
@@ -212,6 +251,16 @@ jobs:
             echo "| --- | --- | --- | --- |"
             cat download-rows.md
             echo
+            if [[ -s ink-rows.md ]]; then
+              echo "### 墨水屏默认版"
+              echo
+              echo "首次安装即为墨水屏主题，界面仍跟随系统明暗；与常规版同包名，二者不能并存安装。"
+              echo
+              echo "| 文件 | ABI | 大小 | SHA-256 |"
+              echo "| --- | --- | --- | --- |"
+              cat ink-rows.md
+              echo
+            fi
             echo "大多数手机选 \`arm64-v8a\`；不确定架构时使用 \`universal\`（体积更大，兼容全部）。"
             echo
             echo "### 版本信息"

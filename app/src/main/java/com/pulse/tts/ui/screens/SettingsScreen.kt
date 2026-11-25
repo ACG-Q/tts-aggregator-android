@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.pulse.tts.data.CallMode
-import com.pulse.tts.data.ThemeMode
 import com.pulse.tts.data.UpdateChannel
 import com.pulse.tts.playback.ReadTuning
 import com.pulse.tts.ui.appViewModel
@@ -72,6 +71,7 @@ import com.pulse.tts.ui.components.SettingSwitchRow
 import com.pulse.tts.ui.components.SettingValueRow
 import com.pulse.tts.ui.components.SettingValueTrailing
 import com.pulse.tts.ui.permissions.permissionBadgeText
+import com.pulse.tts.ui.theme.themeSummary
 import com.pulse.tts.ui.util.voiceDisplayName
 import com.pulse.tts.viewmodel.SettingsViewModel
 import com.pulse.tts.viewmodel.UpdateViewModel
@@ -278,7 +278,7 @@ fun SettingsScreen(
                     icon = Icons.Rounded.Palette,
                     title = "外观",
                     subtitle = "主题、动效与触感",
-                    value = themeLabel(appSettings.theme),
+                    value = themeSummary(appSettings.themeStyle, appSettings.themeSkin),
                     onClick = onOpenAppearance,
                     onTrailingClick = onOpenAppearance,
                 )
@@ -528,14 +528,6 @@ private fun sleepOptions(current: Int): List<SettingSheetOption> {
 private fun channelLabel(channel: UpdateChannel): String = when (channel) {
     UpdateChannel.STABLE -> "正式版"
     UpdateChannel.ALL -> "全部版本"
-}
-
-private fun themeLabel(mode: ThemeMode): String = when (mode) {
-    ThemeMode.SYSTEM -> "跟随系统"
-    ThemeMode.LIGHT -> "浅色"
-    ThemeMode.DARK -> "深色"
-    ThemeMode.INK -> "墨水屏"
-    ThemeMode.GLASS -> "液态玻璃"
 }
 
 private fun modeLabel(mode: CallMode): String = when (mode) {

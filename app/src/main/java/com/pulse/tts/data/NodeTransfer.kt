@@ -2,6 +2,7 @@ package com.pulse.tts.data
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 data class NodeDraft(
     val url: String,
@@ -58,6 +59,12 @@ fun parseNodeBundle(raw: String): NodeImport {
         val config = runCatching {
             transferJson.decodeFromString(ExportedConfig.serializer(), raw)
         }.getOrNull() ?: return NodeImport(emptyList())
+        // 旧版导出文件的 settings 里只有 theme 字段，需要走兼容解码补齐新字段
+        val decodedSettings = runCatching {
+            transferJson.parseToJsonElement(raw).jsonObject["settings"]?.jsonObject
+        }.getOrNull()
+            ?.let { decodeAppSettings(transferJson, it) }
+            ?: config.settings
         val drafts = config.nodes.mapNotNull { node ->
             val url = node.url.trim().removeSuffix("/")
             if (!NODE_URL.matches(url)) {
@@ -71,7 +78,7 @@ fun parseNodeBundle(raw: String): NodeImport {
                 )
             }
         }
-        return NodeImport(drafts = drafts, settings = config.settings)
+        return NodeImport(drafts = drafts, settings = decodedSettings)
     }
     return NodeImport(drafts = parseTextNodes(raw))
 }

@@ -59,8 +59,14 @@ class SettingsStore(context: Context) {
 
     // ---------- 应用级设置 ----------
 
-    private val _appSettings = MutableStateFlow(read<AppSettings>(KEY_APP) ?: AppSettings())
+    private val _appSettings = MutableStateFlow(loadAppSettings())
     val appSettings: StateFlow<AppSettings> = _appSettings
+
+    private fun loadAppSettings(): AppSettings =
+        prefs.getString(KEY_APP, null)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { raw -> decodeAppSettings(json, raw) }
+            ?: AppSettings()
 
     fun saveAppSettings(settings: AppSettings) {
         prefs.edit().putString(KEY_APP, json.encodeToString(AppSettings.serializer(), settings)).apply()

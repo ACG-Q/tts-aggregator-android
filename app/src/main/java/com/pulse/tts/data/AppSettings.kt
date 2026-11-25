@@ -1,20 +1,28 @@
 package com.pulse.tts.data
 
+import com.pulse.tts.BuildConfig
 import kotlinx.serialization.Serializable
 
+/** 明暗样式：只决定界面深浅，不决定视觉风格。 */
 @Serializable
-enum class ThemeMode {
+enum class ThemeStyle {
     SYSTEM,
     LIGHT,
-    DARK,
-    INK,
-    GLASS;
+    DARK;
 
     fun isDark(systemDark: Boolean): Boolean = when (this) {
-        SYSTEM, INK, GLASS -> systemDark
+        SYSTEM -> systemDark
         LIGHT -> false
         DARK -> true
     }
+}
+
+/** 视觉风格：与明暗样式独立组合。 */
+@Serializable
+enum class ThemeSkin {
+    NORMAL,
+    INK,
+    GLASS,
 }
 
 /** 更新渠道：正式版只收正式发布，全部版本包含预发布。 */
@@ -24,9 +32,24 @@ enum class UpdateChannel {
     ALL,
 }
 
+/**
+ * 首次安装的默认主题。
+ *
+ * 常规构建跟随系统 + 常规主题；以 `-PpulseDefaultTheme=ink` 构建时默认墨水屏，
+ * 但同样跟随系统明暗。升级安装不会改动用户已保存的主题。
+ */
+object ThemeDefaults {
+    val style: ThemeStyle = ThemeStyle.SYSTEM
+    val skin: ThemeSkin get() = skinFor(BuildConfig.DEFAULT_INK_THEME)
+
+    internal fun skinFor(inkDefault: Boolean): ThemeSkin =
+        if (inkDefault) ThemeSkin.INK else ThemeSkin.NORMAL
+}
+
 @Serializable
 data class AppSettings(
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val themeStyle: ThemeStyle = ThemeDefaults.style,
+    val themeSkin: ThemeSkin = ThemeDefaults.skin,
     val reduceMotion: Boolean = false,
     val haptics: Boolean = true,
     val backgroundPlay: Boolean = true,

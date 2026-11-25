@@ -7,7 +7,9 @@ import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.dp
-import com.pulse.tts.data.ThemeMode
+import com.pulse.tts.data.ThemeDefaults
+import com.pulse.tts.data.ThemeSkin
+import com.pulse.tts.data.ThemeStyle
 
 /** 统一圆角语言：标签 6 / chip 8 / 卡片 12 / 大容器 16 / 弹层 20 */
 val AppShapes = Shapes(
@@ -37,19 +39,20 @@ val GlassShapes = Shapes(
 )
 
 /**
- * 主题入口：把 [ThemeMode] 解析成色板、形状与风格 token。
+ * 主题入口：把样式与主题解析成色板、形状与风格 token。
  *
  * 风格 token 通过 [LocalAppStyle] 下发，状态色通过 [LocalStatusColors] 下发，
  * 供卡片、底栏、朗读页等组件按主题调整描边、渐变、阴影与动效。
  */
 @Composable
 fun AppTheme(
-    mode: ThemeMode = ThemeMode.SYSTEM,
+    style: ThemeStyle = ThemeDefaults.style,
+    skin: ThemeSkin = ThemeDefaults.skin,
     systemDark: Boolean = isSystemInDarkTheme(),
     reduceMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val resolved = resolveTheme(mode, systemDark)
+    val resolved = resolveTheme(style, skin, systemDark)
     val colors = when (resolved.palette) {
         ThemePalette.LIGHT -> LightColors
         ThemePalette.DARK -> DarkColors
