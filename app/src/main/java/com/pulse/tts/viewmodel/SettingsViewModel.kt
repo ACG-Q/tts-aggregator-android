@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulse.tts.data.AppSettings
 import com.pulse.tts.data.AppSettingsOptions
+import com.pulse.tts.data.AudioCache
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.LogStore
 import com.pulse.tts.data.NodeRepository
@@ -30,6 +31,7 @@ class SettingsViewModel(
     private val settings: SettingsStore,
     private val logs: LogStore,
     private val voices: VoiceRepository,
+    private val cache: AudioCache,
 ) : ViewModel() {
 
     val appSettings: StateFlow<AppSettings> = settings.appSettings
@@ -41,6 +43,30 @@ class SettingsViewModel(
 
     private val _importing = MutableStateFlow(false)
     val importing: StateFlow<Boolean> = _importing
+
+    private val _cacheBytes = MutableStateFlow(0L)
+
+    /** 当前语音缓存占用（字节）；打开缓存托盘时刷新 */
+    val cacheBytes: StateFlow<Long> = _cacheBytes
+
+    fun refreshCacheSize() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _cacheBytes.value = cache.stats().bytes
+        }
+    }
+
+    /** 清空语音缓存，回调在主线提交释放的字节数 */
+    fun clearAudioCache(onDone: (Long) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val freed = cache.clear()
+            _cacheBytes.value = 0L
+            withContext(Dispatchers.Main) { onDone(freed) }
+        }
+    }
+
+    fun setAudioCacheDays(days: Int) = updateApp {
+        it.copy(audioCacheDays = days.coerceAtLeast(0))
+    }
 
     fun updateApp(transform: (AppSettings) -> AppSettings) {
         settings.updateAppSettings(transform)

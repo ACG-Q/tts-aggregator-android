@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
@@ -26,13 +27,16 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -70,9 +75,10 @@ import com.pulse.tts.ui.permissions.permissionBadgeText
 import com.pulse.tts.ui.util.voiceDisplayName
 import com.pulse.tts.viewmodel.SettingsViewModel
 import com.pulse.tts.viewmodel.UpdateViewModel
+import java.util.Locale
 
 /** 首页自带的选择类托盘，避免多处布尔状态互相覆盖。 */
-private enum class SettingsPicker { SLEEP, MODE }
+private enum class SettingsPicker { SLEEP, MODE, CACHE }
 
 /**
  * 设置首页：只放高频项，低频项收进「更多设置」。
@@ -94,7 +100,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val vm: SettingsViewModel = appViewModel {
-        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository)
+        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository, it.audioCache)
     }
     val updateVm: UpdateViewModel = appViewModel { UpdateViewModel(it.updateRepository) }
     val updateState by updateVm.state.collectAsState()
@@ -103,6 +109,7 @@ fun SettingsScreen(
     val pool by vm.poolConfig.collectAsState()
     val nodes by vm.nodes.collectAsState()
     val voiceList by vm.voiceList.collectAsState()
+    val cacheBytes by vm.cacheBytes.collectAsState()
     val version = remember { context.appVersion() }
 
     var picker by remember { mutableStateOf<SettingsPicker?>(null) }
@@ -168,6 +175,21 @@ fun SettingsScreen(
                     value = ReadTuning.pitchLabel(synth.pitch),
                     onDecrease = { vm.stepPitch(-1) },
                     onIncrease = { vm.stepPitch(1) },
+                )
+                SettingDivider()
+                SettingValueRow(
+                    icon = Icons.Rounded.Storage,
+                    title = "语音缓存",
+                    subtitle = "重复朗读同一段不再请求节点",
+                    value = cacheDaysLabel(appSettings.audioCacheDays),
+                    onClick = {
+                        vm.refreshCacheSize()
+                        picker = SettingsPicker.CACHE
+                    },
+                    onTrailingClick = {
+                        vm.refreshCacheSize()
+                        picker = SettingsPicker.CACHE
+                    },
                 )
                 SettingDivider()
                 SettingValueRow(
@@ -411,8 +433,79 @@ fun SettingsScreen(
             },
             onDismiss = { picker = null },
         )
+        SettingsPicker.CACHE -> SettingPickerSheet(
+            title = "语音缓存",
+            description = "相同文本与朗读参数会直接复用本地音频，不发请求也不写调用日志",
+            options = cacheOptions(appSettings.audioCacheDays),
+            onSelect = { id ->
+                picker = null
+                vm.setAudioCacheDays(id.toIntOrNull() ?: 0)
+            },
+            onDismiss = { picker = null },
+            footer = {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Surface(
+                    onClick = {
+                        vm.clearAudioCache { freed ->
+                            onToast("已释放 ${formatBytes(freed)}")
+                        }
+                    },
+                    enabled = cacheBytes > 0,
+                    color = Color.Transparent,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Rounded.DeleteSweep,
+                            contentDescription = null,
+                            tint = if (cacheBytes > 0) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "清除缓存（${formatBytes(cacheBytes)}）",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (cacheBytes > 0) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.outline,
+                        )
+                    }
+                }
+            },
+        )
         null -> Unit
     }
+}
+
+private fun cacheOptions(current: Int): List<SettingSheetOption> {
+    val options = listOf<Triple<Int, String, String?>>(
+        Triple(0, "关闭", "不再保存音频"),
+        Triple(1, "1 天", null),
+        Triple(7, "7 天", null),
+        Triple(30, "30 天", null),
+    )
+    return options.map { (days, label, hint) ->
+        SettingSheetOption(
+            id = days.toString(),
+            label = label,
+            description = hint,
+            selected = current == days,
+        )
+    }
+}
+
+private fun cacheDaysLabel(days: Int): String =
+    if (days <= 0) "关闭" else "$days 天"
+
+private fun formatBytes(bytes: Long): String = when {
+    bytes <= 0 -> "0 MB"
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    else -> String.format(Locale.CHINA, "%.1f MB", bytes / 1024.0 / 1024.0)
 }
 
 private fun sleepOptions(current: Int): List<SettingSheetOption> {

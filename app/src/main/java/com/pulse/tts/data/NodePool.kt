@@ -21,6 +21,7 @@ class NodePool(
     private val logs: LogStore,
     private val api: TtsApiClient,
     private val network: NetworkState,
+    private val cache: AudioCache,
 ) {
 
     private val health = NodeHealthRegistry(
@@ -38,6 +39,8 @@ class NodePool(
         prefs: SynthPrefs = SynthPrefs(),
         onEvent: (SynthesisEvent) -> Unit = {},
     ): Result<ByteArray> {
+        // 先查缓存再判断网络：断网时重复朗读同一段话依然能播放
+        cache.get(text, prefs)?.let { return Result.success(it) }
         repo.awaitReady()
         if (!network.isOnline()) {
             onEvent(SynthesisEvent.Offline)
@@ -82,6 +85,7 @@ class NodePool(
         r.onSuccess {
             // 成功：清零失败计数与冷却（锁内读最新值）
             health.onSuccess(node)
+            cache.put(text, prefs, it)
             logs.insert(
                 CallLog(
                     nodeUrl = node.baseUrl, mode = mode, textLen = text.length,

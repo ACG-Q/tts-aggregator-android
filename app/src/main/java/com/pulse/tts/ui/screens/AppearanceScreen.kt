@@ -54,7 +54,7 @@ import com.pulse.tts.viewmodel.SettingsViewModel
 @Composable
 fun AppearanceScreen(onBack: () -> Unit) {
     val vm: SettingsViewModel = appViewModel {
-        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository)
+        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository, it.audioCache)
     }
     val appSettings by vm.appSettings.collectAsState()
     val systemDark = isSystemInDarkTheme()

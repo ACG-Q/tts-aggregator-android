@@ -3,6 +3,7 @@ package com.pulse.tts
 import android.app.Application
 import android.content.Context
 import android.os.Build
+import com.pulse.tts.data.AudioCache
 import com.pulse.tts.data.LogStore
 import com.pulse.tts.data.NetworkMonitor
 import com.pulse.tts.data.NodePool
@@ -39,12 +40,15 @@ class AppContainer(context: Context) {
     val api = TtsApiClient()
     val networkMonitor = NetworkMonitor(appContext)
 
+    // 缓存层
+    val audioCache = AudioCache(appContext, settings)
+
     // 仓库层
     val nodeRepository = NodeRepository(appContext, nodeStore, api)
     val voiceRepository = VoiceRepository(appContext, settings, api) { nodeRepository.nodes.value }
 
     // 调度层
-    val nodePool = NodePool(nodeRepository, settings, logStore, api, networkMonitor)
+    val nodePool = NodePool(nodeRepository, settings, logStore, api, networkMonitor, audioCache)
 
     // 更新检查
     val updateClient = UpdateClient()

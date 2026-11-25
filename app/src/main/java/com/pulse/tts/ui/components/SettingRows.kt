@@ -202,7 +202,7 @@ data class SettingSheetOption(
     val selected: Boolean = false,
 )
 
-/** 单选托盘：渠道、调度模式、睡眠定时等共用 */
+/** 单选托盘：渠道、调度模式、睡眠定时等共用；[footer] 放清除缓存这类附加操作 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingPickerSheet(
@@ -211,6 +211,7 @@ fun SettingPickerSheet(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
     description: String? = null,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     AppBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -263,6 +264,10 @@ fun SettingPickerSheet(
                     }
                 }
                 Spacer(Modifier.height(2.dp))
+            }
+            if (footer != null) {
+                Spacer(Modifier.height(8.dp))
+                footer()
             }
         }
     }

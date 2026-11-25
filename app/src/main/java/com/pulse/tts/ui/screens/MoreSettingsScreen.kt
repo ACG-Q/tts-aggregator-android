@@ -62,7 +62,7 @@ fun MoreSettingsScreen(
 ) {
     val context = LocalContext.current
     val vm: SettingsViewModel = appViewModel {
-        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository)
+        SettingsViewModel(it.nodeRepository, it.settings, it.logStore, it.voiceRepository, it.audioCache)
     }
     val appSettings by vm.appSettings.collectAsState()
     val nodes by vm.nodes.collectAsState()

@@ -35,6 +35,8 @@ data class AppSettings(
     val cooldownMinutes: Int = 10,
     val failThreshold: Int = 3,
     val sleepMinutes: Int = 0,
+    /** 朗读音频缓存保留天数，0 = 关闭 */
+    val audioCacheDays: Int = 7,
     val lanSyncAutoAllow: Boolean = false,
     /** GitHub 加速前缀，留空表示直连；只用于检查更新与 APK 下载 */
     val githubProxy: String = "",
@@ -50,4 +52,5 @@ object AppSettingsOptions {
     val COOLDOWN_MINUTES = listOf(1, 5, 10, 30, 60)
     val FAIL_THRESHOLDS = listOf(2, 3, 5, 10)
     val SLEEP_MINUTES = listOf(0, 15, 30, 60)
+    val AUDIO_CACHE_DAYS = listOf(0, 1, 7, 30)
 }

@@ -52,6 +52,11 @@ class AppSettingsTest {
     }
 
     @Test
+    fun `语音缓存默认保留 7 天`() {
+        assertEquals(7, AppSettings().audioCacheDays)
+    }
+
+    @Test
     fun `局域网自动允许可序列化往返`() {
         val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
         val encoded = json.encodeToString(AppSettings.serializer(), AppSettings(lanSyncAutoAllow = true))
