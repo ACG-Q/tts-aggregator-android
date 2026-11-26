@@ -1,8 +1,7 @@
 package com.pulse.tts.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.BrightnessAuto
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.TouchApp
@@ -45,9 +42,12 @@ import com.pulse.tts.data.ThemeSkin
 import com.pulse.tts.data.ThemeStyle
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.PulseSubHeader
+import com.pulse.tts.ui.components.SettingChoiceRow
 import com.pulse.tts.ui.components.SettingDivider
 import com.pulse.tts.ui.components.SettingSection
 import com.pulse.tts.ui.components.SettingSwitchRow
+import com.pulse.tts.ui.components.glassBorder
+import com.pulse.tts.ui.theme.AppStyle
 import com.pulse.tts.ui.theme.DarkColors
 import com.pulse.tts.ui.theme.GlassDarkColors
 import com.pulse.tts.ui.theme.GlassLightColors
@@ -67,6 +67,7 @@ import com.pulse.tts.viewmodel.SettingsViewModel
  *
  * 样式决定明暗（跟随系统 / 浅色 / 深色），主题决定视觉风格（常规 / 墨水屏 / 液态玻璃）。
  * 两个维度可任意组合，颜色与动效的最终结果通过 [resolveTheme] 统一计算。
+ * 行规格、分组标题与间距全部复用设置页组件，两个页面保持同一套视觉语言。
  */
 @Composable
 fun AppearanceScreen(onBack: () -> Unit) {
@@ -95,9 +96,10 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 28.dp),
+                .padding(top = 4.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.Top,
         ) {
+            SectionLabel("预览")
             PreviewCard(
                 palette = resolved.palette,
                 title = themeSummary(style, skin),
@@ -107,7 +109,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
             SettingSection("样式") {
                 ThemeStyle.entries.forEachIndexed { index, entry ->
                     if (index > 0) SettingDivider()
-                    AppearanceChoiceRow(
+                    SettingChoiceRow(
                         leading = {
                             Icon(
                                 styleIcon(entry),
@@ -127,13 +129,8 @@ fun AppearanceScreen(onBack: () -> Unit) {
             SettingSection("主题") {
                 ThemeSkin.entries.forEachIndexed { index, entry ->
                     if (index > 0) SettingDivider()
-                    AppearanceChoiceRow(
-                        leading = {
-                            PaletteSwatch(
-                                palette = skinPalette(entry, resolved.dark),
-                                modifier = Modifier.size(40.dp),
-                            )
-                        },
+                    SettingChoiceRow(
+                        leading = { PaletteSwatch(palette = skinPalette(entry, resolved.dark)) },
                         title = skinLabel(entry),
                         subtitle = skinHint(entry),
                         selected = skin == entry,
@@ -163,138 +160,127 @@ fun AppearanceScreen(onBack: () -> Unit) {
     }
 }
 
-/** 与设置首页一致的行结构：40dp 前导槽 + 标题/副标题纵向排列 + 选中勾 */
+/** 与 [SettingSection] 的标题保持同字重、同缩进 */
 @Composable
-private fun AppearanceChoiceRow(
-    leading: @Composable () -> Unit,
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-            leading()
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (selected) {
-            Icon(
-                Icons.Rounded.Check,
-                contentDescription = "已选择",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
+private fun SectionLabel(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 8.dp),
+    )
 }
 
+/**
+ * 迷你预览：只展示标题、说明与进度条，避免占满首屏。
+ * 背景按主题取渐变或纯色，玻璃主题额外加高光描边。
+ */
 @Composable
 private fun PreviewCard(palette: ThemePalette, title: String, subtitle: String) {
     val colors = paletteColors(palette)
-    val useGradients = LocalAppStyle.current.useGradients
-    val background = if (useGradients) {
-        Brush.verticalGradient(
-            listOf(colors.secondaryContainer, colors.background, colors.primaryContainer),
+    val style = LocalAppStyle.current.style
+    val shape = MaterialTheme.shapes.medium
+    val background = when (style) {
+        AppStyle.INK -> SolidColor(colors.background)
+        AppStyle.GLASS -> Brush.linearGradient(
+            listOf(
+                colors.primaryContainer.copy(alpha = 0.55f),
+                colors.background,
+                colors.secondaryContainer.copy(alpha = 0.35f),
+            ),
         )
-    } else {
-        SolidColor(colors.background)
+        AppStyle.STANDARD -> Brush.linearGradient(
+            listOf(colors.secondaryContainer.copy(alpha = 0.45f), colors.background),
+        )
     }
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        color = colors.surface,
+    val border = when (style) {
+        AppStyle.INK -> Modifier.border(1.dp, colors.outlineVariant, shape)
+        AppStyle.GLASS -> Modifier.glassBorder(shape)
+        AppStyle.STANDARD -> Modifier
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp),
+            .background(background, shape)
+            .then(border)
+            .padding(16.dp),
     ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(background)
-                .padding(18.dp),
-        ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).background(colors.secondary, CircleShape))
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.onBackground,
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(8.dp).background(colors.secondary, CircleShape))
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    "正在朗读 · 节点 A",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurface,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.labelMedium,
+                    title,
+                    style = MaterialTheme.typography.labelLarge,
                     color = colors.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.weight(1f))
                 Surface(
                     shape = RoundedCornerShape(999.dp),
-                    color = colors.surface.copy(alpha = 0.9f),
-                    border = BorderStroke(1.dp, colors.outlineVariant),
+                    color = colors.surface.copy(alpha = 0.8f),
                 ) {
                     Text(
-                        "本机文本 · 自动调度",
+                        "自动调度",
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                     )
                 }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "正在朗读 · 节点 A",
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.onBackground,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .background(colors.outlineVariant, RoundedCornerShape(999.dp)),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(0.38f)
+                        .height(4.dp)
+                        .background(colors.primary, RoundedCornerShape(999.dp)),
+                )
             }
         }
     }
 }
 
+/** 20dp 色板缩略图，尺寸与设置行的图标槽一致 */
 @Composable
-private fun PaletteSwatch(palette: ThemePalette, modifier: Modifier = Modifier) {
+private fun PaletteSwatch(palette: ThemePalette) {
     val colors = paletteColors(palette)
     val ink = palette == ThemePalette.INK_LIGHT || palette == ThemePalette.INK_DARK
     Box(
-        modifier
-            .background(colors.background, RoundedCornerShape(10.dp))
-            .padding(4.dp),
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    if (ink) {
-                        Brush.linearGradient(listOf(colors.surface, colors.background))
-                    } else {
-                        Brush.linearGradient(
-                            listOf(
-                                colors.primary.copy(alpha = 0.75f),
-                                colors.secondary.copy(alpha = 0.45f),
-                                colors.surface,
-                            ),
-                        )
-                    },
-                    RoundedCornerShape(7.dp),
-                ),
-        )
-    }
+        Modifier
+            .size(20.dp)
+            .background(
+                if (ink) {
+                    Brush.linearGradient(listOf(colors.surface, colors.background))
+                } else {
+                    Brush.linearGradient(
+                        listOf(
+                            colors.primary.copy(alpha = 0.85f),
+                            colors.secondary.copy(alpha = 0.6f),
+                        ),
+                    )
+                },
+                RoundedCornerShape(6.dp),
+            )
+            .border(1.dp, colors.outlineVariant, RoundedCornerShape(6.dp)),
+    )
 }
 
 private fun styleIcon(style: ThemeStyle): ImageVector = when (style) {
