@@ -83,7 +83,7 @@ fun parseNodeBundle(raw: String): NodeImport {
     return NodeImport(drafts = parseTextNodes(raw))
 }
 
-/** 只取节点，丢弃偏好设置（节点管理里的批量添加走这条路径）。 */
+/** 只取节点，丢弃偏好设置（节点页的批量添加走这条路径）。 */
 fun parseNodeImport(raw: String): List<NodeDraft> = parseNodeBundle(raw).drafts
 
 private fun parseTextNodes(raw: String): List<NodeDraft> = raw.lines().mapNotNull { line ->

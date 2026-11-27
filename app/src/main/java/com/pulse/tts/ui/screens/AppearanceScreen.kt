@@ -140,7 +140,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 SettingSwitchRow(
                     icon = Icons.Rounded.Animation,
                     title = "减少动态效果",
-                    subtitle = "关闭朗读页的脉动与缩放",
+                    subtitle = "关闭转场、选中与列表动画",
                     checked = appSettings.reduceMotion,
                     onCheckedChange = { value -> vm.updateApp { it.copy(reduceMotion = value) } },
                 )
@@ -148,7 +148,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 SettingSwitchRow(
                     icon = Icons.Rounded.TouchApp,
                     title = "触感反馈",
-                    subtitle = "长按节点时轻微振动",
+                    subtitle = "按钮、开关与长按时轻震",
                     checked = appSettings.haptics,
                     onCheckedChange = { value -> vm.updateApp { it.copy(haptics = value) } },
                 )
