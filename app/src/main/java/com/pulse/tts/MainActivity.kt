@@ -28,6 +28,7 @@ import com.pulse.tts.playback.PlaybackController
 import com.pulse.tts.tts.SynthesisNotification
 import com.pulse.tts.tts.SystemReadingEntry
 import com.pulse.tts.ui.ProvideAppContainer
+import com.pulse.tts.ui.components.ProvideAppHaptics
 import com.pulse.tts.ui.theme.AppTheme
 import com.pulse.tts.ui.theme.resolveTheme
 import kotlinx.coroutines.Dispatchers
@@ -77,16 +78,18 @@ class MainActivity : ComponentActivity() {
                     WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars =
                         !resolved.dark
                 }
-                ProvideAppContainer(appSettings) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {
-                        AppNav(
-                            player = playback,
-                            onToast = ::toast,
-                            onExitApp = { finishAffinity() },
-                        )
+                ProvideAppHaptics(appSettings.haptics) {
+                    ProvideAppContainer(appSettings) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            AppNav(
+                                player = playback,
+                                onToast = ::toast,
+                                onExitApp = { finishAffinity() },
+                            )
+                        }
                     }
                 }
             }
