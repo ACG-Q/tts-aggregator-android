@@ -80,6 +80,13 @@ android {
 
     buildTypes {
         release {
+            // 开启代码与资源裁剪：icons-extended 这类整包依赖只有裁剪后才会瘦身
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             signingConfig = signingConfigs.findByName("release")
         }
     }
