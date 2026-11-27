@@ -30,10 +30,6 @@ class ThemeSettingsTest {
             ThemeSelection(ThemeStyle.SYSTEM, ThemeSkin.INK),
             legacyThemeSelection("INK"),
         )
-        assertEquals(
-            ThemeSelection(ThemeStyle.SYSTEM, ThemeSkin.GLASS),
-            legacyThemeSelection("GLASS"),
-        )
         assertNull(legacyThemeSelection(null))
         assertNull(legacyThemeSelection("UNKNOWN"))
     }
@@ -60,10 +56,10 @@ class ThemeSettingsTest {
     fun `新 JSON 直接读取双字段`() {
         val decoded = decodeAppSettings(
             json,
-            """{"themeStyle":"DARK","themeSkin":"GLASS"}""",
+            """{"themeStyle":"LIGHT","themeSkin":"INK"}""",
         )
-        assertEquals(ThemeStyle.DARK, decoded?.themeStyle)
-        assertEquals(ThemeSkin.GLASS, decoded?.themeSkin)
+        assertEquals(ThemeStyle.LIGHT, decoded?.themeStyle)
+        assertEquals(ThemeSkin.INK, decoded?.themeSkin)
     }
 
     @Test

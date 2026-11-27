@@ -2,16 +2,13 @@ package com.pulse.tts.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Headphones
@@ -31,54 +28,14 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.navigation.MainTab
-import com.pulse.tts.ui.theme.AppStyle
-import com.pulse.tts.ui.theme.LocalAppStyle
 
-/** 贴底底部导航：朗读 / 节点 / 记录；玻璃为悬浮胶囊，其它风格为贴底平面。 */
+/** 贴底底部导航：朗读 / 节点 / 记录。 */
 @Composable
 fun PulseTabBar(
     selected: MainTab,
     onSelect: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tokens = LocalAppStyle.current
-
-    if (tokens.style == AppStyle.GLASS) {
-        val shape = RoundedCornerShape(999.dp)
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .glassBorder(shape),
-                shape = shape,
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = if (tokens.useShadows) 14.dp else 0.dp,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                ) {
-                    TabItem("朗读", Icons.Rounded.Headphones, selected == MainTab.READ, Modifier.weight(1f)) {
-                        onSelect(MainTab.READ)
-                    }
-                    TabItem("节点", Icons.Rounded.Dns, selected == MainTab.NODES, Modifier.weight(1f)) {
-                        onSelect(MainTab.NODES)
-                    }
-                    TabItem("记录", Icons.Rounded.History, selected == MainTab.RECORDS, Modifier.weight(1f)) {
-                        onSelect(MainTab.RECORDS)
-                    }
-                }
-            }
-        }
-        return
-    }
-
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,

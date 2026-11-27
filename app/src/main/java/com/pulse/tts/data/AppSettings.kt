@@ -22,7 +22,6 @@ enum class ThemeStyle {
 enum class ThemeSkin {
     NORMAL,
     INK,
-    GLASS,
 }
 
 /** 更新渠道：正式版只收正式发布，全部版本包含预发布。 */

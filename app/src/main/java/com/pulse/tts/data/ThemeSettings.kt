@@ -25,7 +25,6 @@ internal fun legacyThemeSelection(legacy: String?): ThemeSelection? = when (lega
     "LIGHT" -> ThemeSelection(ThemeStyle.LIGHT, ThemeSkin.NORMAL)
     "DARK" -> ThemeSelection(ThemeStyle.DARK, ThemeSkin.NORMAL)
     "INK" -> ThemeSelection(ThemeStyle.SYSTEM, ThemeSkin.INK)
-    "GLASS" -> ThemeSelection(ThemeStyle.SYSTEM, ThemeSkin.GLASS)
     else -> null
 }
 

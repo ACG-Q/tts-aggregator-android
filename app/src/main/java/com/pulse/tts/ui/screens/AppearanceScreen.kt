@@ -46,11 +46,8 @@ import com.pulse.tts.ui.components.SettingChoiceRow
 import com.pulse.tts.ui.components.SettingDivider
 import com.pulse.tts.ui.components.SettingSection
 import com.pulse.tts.ui.components.SettingSwitchRow
-import com.pulse.tts.ui.components.glassBorder
 import com.pulse.tts.ui.theme.AppStyle
 import com.pulse.tts.ui.theme.DarkColors
-import com.pulse.tts.ui.theme.GlassDarkColors
-import com.pulse.tts.ui.theme.GlassLightColors
 import com.pulse.tts.ui.theme.InkDarkColors
 import com.pulse.tts.ui.theme.InkLightColors
 import com.pulse.tts.ui.theme.LightColors
@@ -182,20 +179,12 @@ private fun PreviewCard(palette: ThemePalette, title: String, subtitle: String) 
     val shape = MaterialTheme.shapes.medium
     val background = when (style) {
         AppStyle.INK -> SolidColor(colors.background)
-        AppStyle.GLASS -> Brush.linearGradient(
-            listOf(
-                colors.primaryContainer.copy(alpha = 0.55f),
-                colors.background,
-                colors.secondaryContainer.copy(alpha = 0.35f),
-            ),
-        )
         AppStyle.STANDARD -> Brush.linearGradient(
             listOf(colors.secondaryContainer.copy(alpha = 0.45f), colors.background),
         )
     }
     val border = when (style) {
         AppStyle.INK -> Modifier.border(1.dp, colors.outlineVariant, shape)
-        AppStyle.GLASS -> Modifier.glassBorder(shape)
         AppStyle.STANDARD -> Modifier
     }
 
@@ -298,19 +287,16 @@ private fun styleHint(style: ThemeStyle, systemDark: Boolean): String = when (st
 private fun skinHint(skin: ThemeSkin): String = when (skin) {
     ThemeSkin.NORMAL -> "简洁的冷灰背景"
     ThemeSkin.INK -> "单像素描边，自动关闭动效"
-    ThemeSkin.GLASS -> "分层玻璃与模糊效果"
 }
 
 private fun themeHint(style: ThemeStyle, skin: ThemeSkin, systemDark: Boolean): String = when (skin) {
     ThemeSkin.NORMAL -> if (style.isDark(systemDark)) "常规 · 深色界面" else "常规 · 浅色界面"
     ThemeSkin.INK -> "墨水屏 · 单像素描边，动效已关闭"
-    ThemeSkin.GLASS -> "液态玻璃 · 分层与模糊"
 }
 
 private fun skinPalette(skin: ThemeSkin, dark: Boolean): ThemePalette = when (skin) {
     ThemeSkin.NORMAL -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
     ThemeSkin.INK -> if (dark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT
-    ThemeSkin.GLASS -> if (dark) ThemePalette.GLASS_DARK else ThemePalette.GLASS_LIGHT
 }
 
 private fun paletteColors(palette: ThemePalette) = when (palette) {
@@ -318,6 +304,4 @@ private fun paletteColors(palette: ThemePalette) = when (palette) {
     ThemePalette.DARK -> DarkColors
     ThemePalette.INK_LIGHT -> InkLightColors
     ThemePalette.INK_DARK -> InkDarkColors
-    ThemePalette.GLASS_LIGHT -> GlassLightColors
-    ThemePalette.GLASS_DARK -> GlassDarkColors
 }

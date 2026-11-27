@@ -54,24 +54,4 @@ class ThemeResolutionTest {
             resolve(ThemeStyle.DARK, ThemeSkin.INK, systemDark = false),
         )
     }
-
-    @Test
-    fun `glass combines with every style`() {
-        assertEquals(
-            ResolvedTheme(AppStyle.GLASS, false, ThemePalette.GLASS_LIGHT),
-            resolve(ThemeStyle.SYSTEM, ThemeSkin.GLASS, systemDark = false),
-        )
-        assertEquals(
-            ResolvedTheme(AppStyle.GLASS, true, ThemePalette.GLASS_DARK),
-            resolve(ThemeStyle.SYSTEM, ThemeSkin.GLASS, systemDark = true),
-        )
-        assertEquals(
-            ResolvedTheme(AppStyle.GLASS, false, ThemePalette.GLASS_LIGHT),
-            resolve(ThemeStyle.LIGHT, ThemeSkin.GLASS, systemDark = true),
-        )
-        assertEquals(
-            ResolvedTheme(AppStyle.GLASS, true, ThemePalette.GLASS_DARK),
-            resolve(ThemeStyle.DARK, ThemeSkin.GLASS, systemDark = false),
-        )
-    }
 }

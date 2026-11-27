@@ -130,46 +130,6 @@ fun SoundOrb(
                     }
                 }
             }
-            AppStyle.GLASS -> {
-                Box(
-                    Modifier
-                        .size(190.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        Modifier
-                            .size(150.dp)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.65f),
-                                    ),
-                                ),
-                                CircleShape,
-                            )
-                            .border(
-                                1.dp,
-                                Brush.linearGradient(
-                                    listOf(
-                                        Color.White.copy(alpha = 0.9f),
-                                        Color.White.copy(alpha = 0.2f),
-                                    ),
-                                ),
-                                CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Rounded.GraphicEq,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(46.dp),
-                        )
-                    }
-                }
-            }
             AppStyle.STANDARD -> {
                 Box(
                     Modifier
@@ -220,7 +180,7 @@ fun ReaderChip(
     }
     Surface(
         onClick = onClick,
-        modifier = modifier.glassBorder(shape),
+        modifier = modifier,
         shape = shape,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer
         else MaterialTheme.colorScheme.surface,

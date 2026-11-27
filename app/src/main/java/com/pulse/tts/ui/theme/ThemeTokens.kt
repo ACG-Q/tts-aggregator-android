@@ -8,11 +8,11 @@ import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.ThemeSkin
 import com.pulse.tts.data.ThemeStyle
 
-/** 视觉风格：标准、墨水屏、液态玻璃。 */
-internal enum class AppStyle { STANDARD, INK, GLASS }
+/** 视觉风格：标准、墨水屏。 */
+internal enum class AppStyle { STANDARD, INK }
 
-/** 具体色板；墨水屏与玻璃各自带明暗两套，跟随样式切换。 */
-internal enum class ThemePalette { LIGHT, DARK, INK_LIGHT, INK_DARK, GLASS_LIGHT, GLASS_DARK }
+/** 具体色板；墨水屏带明暗两套，跟随样式切换。 */
+internal enum class ThemePalette { LIGHT, DARK, INK_LIGHT, INK_DARK }
 
 /** 主题的解析结果：风格 + 实际深浅 + 色板。 */
 internal data class ResolvedTheme(
@@ -31,12 +31,10 @@ internal fun resolveTheme(
     val appStyle = when (skin) {
         ThemeSkin.NORMAL -> AppStyle.STANDARD
         ThemeSkin.INK -> AppStyle.INK
-        ThemeSkin.GLASS -> AppStyle.GLASS
     }
     val palette = when (skin) {
         ThemeSkin.NORMAL -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
         ThemeSkin.INK -> if (dark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT
-        ThemeSkin.GLASS -> if (dark) ThemePalette.GLASS_DARK else ThemePalette.GLASS_LIGHT
     }
     return ResolvedTheme(appStyle, dark, palette)
 }
@@ -68,15 +66,6 @@ internal val InkStyleTokens = AppStyleTokens(
     useShadows = false,
     cardBorderWidth = 1.dp,
     statusUsesColor = false,
-)
-
-internal val GlassStyleTokens = AppStyleTokens(
-    style = AppStyle.GLASS,
-    motionEnabled = true,
-    useGradients = true,
-    useShadows = true,
-    cardBorderWidth = 0.dp,
-    statusUsesColor = true,
 )
 
 /** 状态色：常规主题用固定语义色，墨水屏退化为灰度。 */

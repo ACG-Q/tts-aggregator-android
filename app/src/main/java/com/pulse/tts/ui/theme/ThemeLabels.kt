@@ -14,7 +14,6 @@ internal fun styleLabel(style: ThemeStyle): String = when (style) {
 internal fun skinLabel(skin: ThemeSkin): String = when (skin) {
     ThemeSkin.NORMAL -> "常规"
     ThemeSkin.INK -> "墨水屏"
-    ThemeSkin.GLASS -> "液态玻璃"
 }
 
 /** 单行摘要：常规主题只显示样式，特殊主题在自选明暗时附上样式。 */

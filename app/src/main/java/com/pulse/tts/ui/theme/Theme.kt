@@ -29,15 +29,6 @@ val InkShapes = Shapes(
     extraLarge = RoundedCornerShape(10.dp),
 )
 
-/** 液态玻璃：胶囊与大圆角叠层 */
-val GlassShapes = Shapes(
-    extraSmall = RoundedCornerShape(10.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(22.dp),
-    large = RoundedCornerShape(28.dp),
-    extraLarge = RoundedCornerShape(34.dp),
-)
-
 /**
  * 主题入口：把样式与主题解析成色板、形状与风格 token。
  *
@@ -58,18 +49,14 @@ fun AppTheme(
         ThemePalette.DARK -> DarkColors
         ThemePalette.INK_LIGHT -> InkLightColors
         ThemePalette.INK_DARK -> InkDarkColors
-        ThemePalette.GLASS_LIGHT -> GlassLightColors
-        ThemePalette.GLASS_DARK -> GlassDarkColors
     }
     val shapes = when (resolved.style) {
         AppStyle.STANDARD -> AppShapes
         AppStyle.INK -> InkShapes
-        AppStyle.GLASS -> GlassShapes
     }
     val tokens = when (resolved.style) {
         AppStyle.STANDARD -> StandardStyleTokens
         AppStyle.INK -> InkStyleTokens
-        AppStyle.GLASS -> GlassStyleTokens
     }.let { it.copy(motionEnabled = it.motionEnabled && !reduceMotion) }
 
     val status = if (resolved.style == AppStyle.INK) {

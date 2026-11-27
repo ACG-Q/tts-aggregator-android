@@ -74,12 +74,8 @@ fun AppCard(
 ) {
     val tokens = LocalAppStyle.current
     val shape = MaterialTheme.shapes.medium
-    val glass = tokens.style == AppStyle.GLASS
-    val colors = CardDefaults.cardColors(
-        containerColor = if (glass) containerColor.copy(alpha = 0.92f) else containerColor,
-    )
+    val colors = CardDefaults.cardColors(containerColor = containerColor)
     val border = when {
-        glass -> null
         tokens.style == AppStyle.INK -> BorderStroke(
             tokens.cardBorderWidth,
             MaterialTheme.colorScheme.outlineVariant,
@@ -87,12 +83,8 @@ fun AppCard(
         bordered -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         else -> null
     }
-    val elevation = CardDefaults.cardElevation(
-        defaultElevation = if (glass && tokens.useShadows) 10.dp else 0.dp,
-    )
-    val cardModifier = modifier
-        .fillMaxWidth()
-        .glassBorder(shape)
+    val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    val cardModifier = modifier.fillMaxWidth()
 
     if (onClick != null && onLongClick != null) {
         // 需要长按：不能让 M3 clickable Card 独占手势，否则 onLongClick 收不到事件
