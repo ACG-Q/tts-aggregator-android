@@ -77,9 +77,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,6 +89,7 @@ import com.pulse.tts.data.TtsNode
 import com.pulse.tts.data.exportNodesJson
 import com.pulse.tts.data.knownGroups
 import com.pulse.tts.ui.LocalAppSettings
+import com.pulse.tts.ui.components.LocalAppHaptics
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.AddNodeSheet
 import com.pulse.tts.ui.components.BatchAddSheet
@@ -123,6 +122,7 @@ import kotlinx.coroutines.delay
  * 节点一级页：品牌头部 + 调度概览 + 模式分段器 + 健康卡片。
  * 卡片信息层级对齐 Pulse 原型：健康图标 / 名称与徽章 / 延迟与测试时间 / 地址。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NodesScreen(
     onToast: (String) -> Unit,
@@ -132,7 +132,7 @@ fun NodesScreen(
     }
     val context = LocalContext.current
     val appSettings = LocalAppSettings.current
-    val haptics = LocalHapticFeedback.current
+    val haptics = LocalAppHaptics.current
     val nodes by vm.nodes.collectAsState()
     val online by vm.online.collectAsState()
     val groups = remember(nodes) { knownGroups(nodes) }
@@ -226,9 +226,7 @@ fun NodesScreen(
                 },
                 onAdd = { showAdd = true },
                 onLongAdd = {
-                    if (appSettings.haptics) {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    }
+                    haptics.longPress()
                     showBatchAdd = true
                 },
             )
@@ -305,9 +303,7 @@ fun NodesScreen(
                                 if (selectMode) toggleCheck() else detailId = node.id
                             },
                             onLongClick = {
-                                if (appSettings.haptics) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
+                                haptics.longPress()
                                 if (selectMode) {
                                     toggleCheck()
                                 } else {
@@ -317,6 +313,7 @@ fun NodesScreen(
                             },
                             onToggleCheck = { toggleCheck() },
                             onToggleGroup = { vm.toggleGroupMember(node.id) },
+                            modifier = Modifier.animateItemPlacement(),
                         )
                         Spacer(Modifier.height(10.dp))
                     }
@@ -327,9 +324,7 @@ fun NodesScreen(
                     AddNodeButton(
                         onClick = { showAdd = true },
                         onLongClick = {
-                            if (appSettings.haptics) {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
+                            haptics.longPress()
                             showBatchAdd = true
                         },
                     )
@@ -731,6 +726,7 @@ private fun NodeCard(
     onLongClick: () -> Unit,
     onToggleCheck: () -> Unit,
     onToggleGroup: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val state = node.uiState(now)
     val speed = node.lastSpeedMs.takeIf { it > 0 }
@@ -741,7 +737,7 @@ private fun NodeCard(
     }
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = MaterialTheme.shapes.medium,

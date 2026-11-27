@@ -1,4 +1,4 @@
-﻿package com.pulse.tts.ui.components
+package com.pulse.tts.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -220,6 +220,7 @@ fun NodeDetailSheet(
                     tint = MaterialTheme.colorScheme.error,
                     onClick = onDelete,
                     modifier = Modifier.weight(1f),
+                    risk = true,
                 )
             }
 
@@ -255,6 +256,7 @@ fun AddNodeSheet(
     onDismiss: () -> Unit,
     onSave: (url: String, label: String, apiKey: String?, group: String) -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
     var label by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
@@ -390,7 +392,10 @@ fun AddNodeSheet(
 
             Spacer(Modifier.height(14.dp))
             Button(
-                onClick = { submit() },
+                onClick = {
+                    haptics.tap()
+                    submit()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -522,6 +527,7 @@ fun BatchAddSheet(
     onDismiss: () -> Unit,
     onImport: (raw: String, group: String, autoTest: Boolean) -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
     var raw by remember { mutableStateOf("") }
     var group by remember { mutableStateOf(initialGroup) }
     var autoTest by remember { mutableStateOf(true) }
@@ -606,7 +612,10 @@ fun BatchAddSheet(
 
             Spacer(Modifier.height(14.dp))
             Button(
-                onClick = { onImport(raw, group, autoTest) },
+                onClick = {
+                    haptics.tap()
+                    onImport(raw, group, autoTest)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -637,6 +646,7 @@ fun GroupSelectSheet(
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val groups = remember(nodes) { knownGroups(nodes) }
     var filter by remember { mutableStateOf<String?>(null) }
@@ -713,7 +723,10 @@ fun GroupSelectSheet(
                 visible.forEach { node ->
                     val checked = node.id in selected
                     Surface(
-                        onClick = { toggle(node.id) },
+                        onClick = {
+                            haptics.toggle()
+                            toggle(node.id)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         color = if (checked) {
@@ -759,7 +772,10 @@ fun GroupSelectSheet(
 
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick = { onSave(selected) },
+                onClick = {
+                    haptics.tap()
+                    onSave(selected)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -809,6 +825,7 @@ internal fun GroupSelector(
     enabled: Boolean,
     onSelect: (String) -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -816,7 +833,10 @@ internal fun GroupSelector(
         groups.forEach { group ->
             val isSelected = group == selected
             Surface(
-                onClick = { onSelect(group) },
+                onClick = {
+                    haptics.toggle()
+                    onSelect(group)
+                },
                 enabled = enabled,
                 shape = RoundedCornerShape(9.dp),
                 color = if (isSelected) {
@@ -900,9 +920,14 @@ private fun DetailAction(
     tint: Color = MaterialTheme.colorScheme.primary,
     enabled: Boolean = true,
     loading: Boolean = false,
+    risk: Boolean = false,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(
-        onClick = onClick,
+        onClick = {
+            if (risk) haptics.longPress() else haptics.tap()
+            onClick()
+        },
         modifier = modifier,
         enabled = enabled && !loading,
         shape = RoundedCornerShape(12.dp),

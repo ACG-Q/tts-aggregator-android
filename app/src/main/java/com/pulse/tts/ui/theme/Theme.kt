@@ -82,6 +82,7 @@ fun AppTheme(
     CompositionLocalProvider(
         LocalAppStyle provides tokens,
         LocalStatusColors provides status,
+        LocalMotion provides MotionSpec(tokens.motionEnabled),
     ) {
         MaterialTheme(
             colorScheme = colors,

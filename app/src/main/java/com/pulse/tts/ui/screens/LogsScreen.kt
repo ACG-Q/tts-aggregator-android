@@ -3,6 +3,7 @@ package com.pulse.tts.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,16 +41,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.CallLog
 import com.pulse.tts.data.CallMode
 import com.pulse.tts.data.LogFilter
 import com.pulse.tts.data.Voice
 import com.pulse.tts.data.exportLogsJson
-import com.pulse.tts.ui.LocalAppSettings
+import com.pulse.tts.ui.components.LocalAppHaptics
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.ui.components.AppCard
 import com.pulse.tts.ui.components.EmptyState
@@ -78,6 +77,7 @@ import java.time.Instant
  *
  * 多选支持顶部图标与长按卡片两种入口；选中记录可导出为 JSON。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LogsScreen(
     onToast: (String) -> Unit,
@@ -89,8 +89,7 @@ fun LogsScreen(
     val voices by vm.voiceList.collectAsState()
 
     val context = LocalContext.current
-    val appSettings = LocalAppSettings.current
-    val haptics = LocalHapticFeedback.current
+    val haptics = LocalAppHaptics.current
     val scope = rememberCoroutineScope()
 
     var selectMode by remember { mutableStateOf(false) }
@@ -107,9 +106,7 @@ fun LogsScreen(
     }
 
     fun enterSelectionWith(id: Long) {
-        if (appSettings.haptics) {
-            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
+        haptics.longPress()
         if (selectMode) {
             toggle(id)
         } else {
@@ -235,6 +232,7 @@ fun LogsScreen(
                             },
                             onLongClick = { enterSelectionWith(log.id) },
                             onToggleCheck = { toggle(log.id) },
+                            modifier = Modifier.animateItemPlacement(),
                         )
                     }
                 }
@@ -279,8 +277,10 @@ private fun LogSummaryCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onToggleCheck: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     AppCard(
+        modifier = modifier,
         onClick = onClick,
         onLongClick = onLongClick,
         containerColor = if (checked) {

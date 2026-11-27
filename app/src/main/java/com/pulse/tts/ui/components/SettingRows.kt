@@ -1,5 +1,10 @@
 package com.pulse.tts.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.pulse.tts.ui.theme.LocalMotion
 
 /**
  * 设置页通用行与托盘。
@@ -76,9 +82,13 @@ fun SettingValueTrailing(
         modifier = Modifier
             .then(
                 if (onClick != null) {
+                    val haptics = LocalAppHaptics.current
                     Modifier
                         .heightIn(min = 44.dp)
-                        .clickable(onClick = onClick)
+                        .clickable {
+                            haptics.tap()
+                            onClick()
+                        }
                 } else {
                     Modifier.heightIn(min = 44.dp)
                 },
@@ -143,10 +153,15 @@ fun SettingChoiceRow(
     onClick: () -> Unit,
     leading: @Composable () -> Unit,
 ) {
+    val haptics = LocalAppHaptics.current
+    val motion = LocalMotion.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable {
+                haptics.toggle()
+                onClick()
+            }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -166,7 +181,12 @@ fun SettingChoiceRow(
                 )
             }
         }
-        if (selected) {
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(tween(motion.duration(140))) +
+                scaleIn(tween(motion.duration(140))),
+            exit = fadeOut(tween(motion.duration(140))),
+        ) {
             Icon(
                 Icons.Rounded.Check,
                 contentDescription = "已选择",
@@ -192,7 +212,14 @@ fun SettingSwitchRow(
         subtitle = subtitle,
         onClick = { onCheckedChange(!checked) },
         trailing = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            val haptics = LocalAppHaptics.current
+            Switch(
+                checked = checked,
+                onCheckedChange = { value ->
+                    haptics.toggle()
+                    onCheckedChange(value)
+                },
+            )
         },
     )
 }
@@ -212,7 +239,11 @@ fun SettingStepperRow(
         title = title,
         subtitle = subtitle,
         trailing = {
-            IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
+            val haptics = LocalAppHaptics.current
+            IconButton(onClick = {
+                haptics.tap()
+                onDecrease()
+            }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Rounded.Remove,
                     contentDescription = "减少$title",
@@ -226,7 +257,10 @@ fun SettingStepperRow(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
-            IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = {
+                haptics.tap()
+                onIncrease()
+            }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Rounded.Add,
                     contentDescription = "增加$title",
@@ -258,6 +292,7 @@ fun SettingPickerSheet(
     footer: (@Composable () -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val haptics = LocalAppHaptics.current
     AppBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
@@ -277,7 +312,10 @@ fun SettingPickerSheet(
             Spacer(Modifier.height(10.dp))
             options.forEach { option ->
                 Surface(
-                    onClick = { onSelect(option.id) },
+                    onClick = {
+                        haptics.tap()
+                        onSelect(option.id)
+                    },
                     shape = MaterialTheme.shapes.medium,
                     color = if (option.selected) MaterialTheme.colorScheme.surfaceVariant
                     else Color.Transparent,
@@ -330,6 +368,7 @@ fun SettingConfirmSheet(
     destructive: Boolean = false,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val haptics = LocalAppHaptics.current
     AppBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
@@ -368,11 +407,17 @@ fun SettingConfirmSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TextButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        haptics.tap()
+                        onDismiss()
+                    },
                     modifier = Modifier.weight(1f),
                 ) { Text("取消") }
                 Button(
-                    onClick = onConfirm,
+                    onClick = {
+                        if (destructive) haptics.longPress() else haptics.toggle()
+                        onConfirm()
+                    },
                     modifier = Modifier.weight(1f),
                     colors = if (destructive) {
                         ButtonDefaults.buttonColors(

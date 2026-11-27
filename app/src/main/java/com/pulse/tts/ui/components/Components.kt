@@ -1,11 +1,16 @@
 package com.pulse.tts.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +38,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +58,7 @@ import com.pulse.tts.data.ApiVersion
 import com.pulse.tts.data.TtsNode
 import com.pulse.tts.ui.theme.AppStyle
 import com.pulse.tts.ui.theme.LocalAppStyle
+import com.pulse.tts.ui.theme.LocalMotion
 import com.pulse.tts.ui.theme.LocalStatusColors
 
 /**
@@ -73,6 +81,7 @@ fun AppCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val tokens = LocalAppStyle.current
+    val haptics = LocalAppHaptics.current
     val shape = MaterialTheme.shapes.medium
     val colors = CardDefaults.cardColors(containerColor = containerColor)
     val border = when {
@@ -90,8 +99,14 @@ fun AppCard(
         // 需要长按：不能让 M3 clickable Card 独占手势，否则 onLongClick 收不到事件
         Card(
             modifier = cardModifier.combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick,
+                onClick = {
+                    haptics.tap()
+                    onClick()
+                },
+                onLongClick = {
+                    haptics.longPress()
+                    onLongClick()
+                },
             ),
             shape = shape,
             colors = colors,
@@ -108,7 +123,10 @@ fun AppCard(
             colors = colors,
             border = border,
             elevation = elevation,
-            onClick = onClick,
+            onClick = {
+                haptics.tap()
+                onClick()
+            },
         ) {
             Column(modifier = Modifier.padding(contentPadding), content = content)
         }
@@ -299,17 +317,43 @@ fun SettingRowLayout(
     onLongClick: (() -> Unit)? = null,
     trailing: @Composable (RowScope.() -> Unit)? = null,
 ) {
+    val haptics = LocalAppHaptics.current
+    val motion = LocalMotion.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressedTint by animateColorAsState(
+        targetValue = if (pressed) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        else Color.Transparent,
+        animationSpec = tween(motion.duration(120)),
+        label = "settingRowPress",
+    )
     val gesture = when {
         onClick != null && onLongClick != null -> Modifier.combinedClickable(
-            onClick = onClick,
-            onLongClick = onLongClick,
+            interactionSource = interactionSource,
+            indication = LocalIndication.current,
+            onClick = {
+                haptics.tap()
+                onClick()
+            },
+            onLongClick = {
+                haptics.longPress()
+                onLongClick()
+            },
         )
-        onClick != null -> Modifier.clickable(onClick = onClick)
+        onClick != null -> Modifier.clickable(
+            interactionSource = interactionSource,
+            indication = LocalIndication.current,
+            onClick = {
+                haptics.tap()
+                onClick()
+            },
+        )
         else -> Modifier
     }
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .background(pressedTint)
             .then(gesture)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -347,8 +391,12 @@ fun SelectChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable {
+            haptics.toggle()
+            onClick()
+        },
         shape = MaterialTheme.shapes.small,
         color = if (selected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.surface,
@@ -385,7 +433,11 @@ fun PulseSubHeader(
             .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
+            val haptics = LocalAppHaptics.current
+            IconButton(onClick = {
+                haptics.tap()
+                onBack()
+            }) {
                 Icon(
                     Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = "返回",

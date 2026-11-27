@@ -40,6 +40,7 @@ fun BatchBar(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
@@ -60,7 +61,10 @@ fun BatchBar(
                     enabled = true,
                 )
                 BarTextButton(text = "反选", onClick = onInvert, enabled = true)
-                IconButton(onClick = onExit, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = {
+                    haptics.tap()
+                    onExit()
+                }, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Rounded.Close,
                         contentDescription = "退出多选",
@@ -88,6 +92,7 @@ fun BatchBar(
                     selectedCount > 0,
                     Modifier.weight(1f),
                     tint = MaterialTheme.colorScheme.error,
+                    risk = true,
                 )
             }
         }
@@ -101,9 +106,14 @@ private fun BarAction(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.primary,
+    risk: Boolean = false,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(
-        onClick = onClick,
+        onClick = {
+            if (risk) haptics.longPress() else haptics.tap()
+            onClick()
+        },
         modifier = modifier,
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
@@ -129,8 +139,12 @@ private fun BarTextButton(
     onClick: () -> Unit,
     enabled: Boolean,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(
-        onClick = onClick,
+        onClick = {
+            haptics.tap()
+            onClick()
+        },
         enabled = enabled,
         shape = RoundedCornerShape(8.dp),
         color = Color.Transparent,
@@ -155,6 +169,7 @@ fun LogsSelectionBar(
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalAppHaptics.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
@@ -175,7 +190,10 @@ fun LogsSelectionBar(
                     enabled = true,
                 )
                 BarTextButton(text = "反选", onClick = onInvert, enabled = true)
-                IconButton(onClick = onExit, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = {
+                    haptics.tap()
+                    onExit()
+                }, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Rounded.Close,
                         contentDescription = "退出多选",

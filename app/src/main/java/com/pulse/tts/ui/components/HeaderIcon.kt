@@ -17,7 +17,11 @@ fun HeaderIcon(
     active: Boolean = false,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+    val haptics = LocalAppHaptics.current
+    IconButton(onClick = {
+        haptics.tap()
+        onClick()
+    }, modifier = Modifier.size(40.dp)) {
         Icon(
             icon,
             contentDescription = description,

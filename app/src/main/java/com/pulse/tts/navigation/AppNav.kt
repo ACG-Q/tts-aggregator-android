@@ -4,6 +4,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +40,7 @@ import com.pulse.tts.ui.screens.picker.VoicePickerSheet
 import com.pulse.tts.ui.screens.LanSyncScreen
 import com.pulse.tts.ui.appViewModel
 import com.pulse.tts.viewmodel.UpdateViewModel
+import com.pulse.tts.ui.theme.LocalMotion
 
 /**
  * 应用壳：一级 Tab（朗读 / 节点 / 记录）+ 子页栈 + 全屏朗读态。
@@ -100,7 +106,16 @@ fun AppNav(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        when (val current = screen) {
+        val motion = LocalMotion.current
+        AnimatedContent(
+            targetState = screen,
+            transitionSpec = {
+                fadeIn(tween(motion.duration(180))) togetherWith
+                    fadeOut(tween(motion.duration(180)))
+            },
+            label = "appScreen",
+        ) { current ->
+            when (current) {
             is Screen.Home -> HomeScreen(
                 player = player,
                 onToast = onToast,
@@ -147,7 +162,9 @@ fun AppNav(
                 onBack = { nav.handleBack() },
                 onToast = onToast,
             )
-            else -> Unit        }
+            else -> Unit
+            }
+        }
 
         if (screen.isMain) {
             PulseTabBar(
