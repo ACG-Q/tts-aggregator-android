@@ -30,11 +30,11 @@ class NavViewModelTest {
     fun `多级导航按入栈顺序弹出`() {
         val nav = NavViewModel()
         nav.goSettings()
-        nav.goAdmin()
+        nav.goMoreSettings()
         nav.goAbout()
         assertEquals(Screen.About, nav.screen.value)
         assertTrue(nav.handleBack())
-        assertEquals(Screen.Admin, nav.screen.value)
+        assertEquals(Screen.MoreSettings, nav.screen.value)
         assertTrue(nav.handleBack())
         assertEquals(Screen.Settings, nav.screen.value)
         assertTrue(nav.handleBack())

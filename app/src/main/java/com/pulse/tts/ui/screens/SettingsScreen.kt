@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Info
@@ -91,7 +90,6 @@ private enum class SettingsPicker { SLEEP, MODE, CACHE }
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenPermissions: () -> Unit,
-    onOpenAdmin: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenLanSync: () -> Unit,
     onOpenAppearance: () -> Unit,
@@ -107,7 +105,6 @@ fun SettingsScreen(
     val appSettings by vm.appSettings.collectAsState()
     val synth by vm.synthSettings.collectAsState()
     val pool by vm.poolConfig.collectAsState()
-    val nodes by vm.nodes.collectAsState()
     val voiceList by vm.voiceList.collectAsState()
     val cacheBytes by vm.cacheBytes.collectAsState()
     val version = remember { context.appVersion() }
@@ -219,16 +216,6 @@ fun SettingsScreen(
             }
 
             SettingSection("节点与调度") {
-                SettingValueRow(
-                    icon = Icons.Rounded.Dns,
-                    title = "节点管理",
-                    subtitle = "添加、测试与分组维护",
-                    value = "${nodes.size} 个",
-                    highlight = true,
-                    onClick = onOpenAdmin,
-                    onTrailingClick = onOpenAdmin,
-                )
-                SettingDivider()
                 SettingValueRow(
                     icon = Icons.Rounded.SwapHoriz,
                     title = "默认模式",

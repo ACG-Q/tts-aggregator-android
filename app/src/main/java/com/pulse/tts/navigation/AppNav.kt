@@ -18,7 +18,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pulse.tts.playback.PlaybackController
 import com.pulse.tts.ui.components.PulseTabBar
 import com.pulse.tts.ui.screens.AboutScreen
-import com.pulse.tts.ui.screens.AdminScreen
 import com.pulse.tts.ui.screens.AppearanceScreen
 import com.pulse.tts.ui.screens.HomeScreen
 import com.pulse.tts.ui.screens.LogDetailScreen
@@ -125,7 +124,6 @@ fun AppNav(
             is Screen.Settings -> SettingsScreen(
                 onBack = { nav.handleBack() },
                 onOpenPermissions = nav::goPermissions,
-                onOpenAdmin = nav::goAdmin,
                 onOpenVoice = { voicePickerVisible = true },
                 onOpenLanSync = nav::goLanSync,
                 onOpenAppearance = nav::goAppearance,
@@ -149,12 +147,7 @@ fun AppNav(
                 onBack = { nav.handleBack() },
                 onToast = onToast,
             )
-            is Screen.Admin -> AdminScreen(
-                onBack = { nav.handleBack() },
-                onToast = onToast,
-            )
-            else -> Unit
-        }
+            else -> Unit        }
 
         if (screen.isMain) {
             PulseTabBar(

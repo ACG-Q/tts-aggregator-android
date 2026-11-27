@@ -48,7 +48,7 @@ class NodePool(
         }
         val nodes = repo.nodes.first()
         if (nodes.isEmpty()) {
-            val message = "还没有节点：请先到 设置 → 节点管理 添加"
+            val message = "还没有节点：请先到底部「节点」页添加"
             onEvent(SynthesisEvent.Failed(message))
             return Result.failure(IllegalStateException(message))
         }
@@ -139,7 +139,7 @@ class NodePool(
         if (candidates.isEmpty()) {
             val cooling = nodes.count { it.isCoolingDown(now) }
             val msg = if (cooling > 0) "所有节点均不可用（$cooling 个冷却中）" else "没有可用节点"
-            val message = "$msg，请到节点管理重新测试"
+            val message = "$msg，请到底部「节点」页重新测试"
             onEvent(SynthesisEvent.Failed(message, CallMode.AUTO))
             return Result.failure(IllegalStateException(message))
         }
@@ -269,7 +269,7 @@ class NodePool(
         val cfg = config
         if (cfg.manualFailCount >= FAIL_LIMIT) {
             val message = "手选节点已连续失败 $FAIL_LIMIT 次，调用已停止。" +
-                "请到节点管理重新测试，或在首页更换手选节点。"
+                "请到底部「节点」页重新测试，或在首页更换手选节点。"
             onEvent(SynthesisEvent.Failed(message, CallMode.MANUAL))
             return Result.failure(IllegalStateException(message))
         }
