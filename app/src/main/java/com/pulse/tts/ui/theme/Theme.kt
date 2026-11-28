@@ -1,11 +1,15 @@
 package com.pulse.tts.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.ThemeDefaults
 import com.pulse.tts.data.ThemeSkin
@@ -43,12 +47,24 @@ fun AppTheme(
     reduceMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val resolved = resolveTheme(style, skin, systemDark)
+    val dynamic = dynamicColorAvailable(Build.VERSION.SDK_INT)
+    val resolved = resolveTheme(style, skin, systemDark, dynamic)
+    val context = LocalContext.current
     val colors = when (resolved.palette) {
         ThemePalette.LIGHT -> LightColors
         ThemePalette.DARK -> DarkColors
         ThemePalette.INK_LIGHT -> InkLightColors
         ThemePalette.INK_DARK -> InkDarkColors
+        ThemePalette.DYNAMIC_LIGHT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicLightColorScheme(context)
+        } else {
+            LightColors
+        }
+        ThemePalette.DYNAMIC_DARK -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicDarkColorScheme(context)
+        } else {
+            DarkColors
+        }
     }
     val shapes = when (resolved.style) {
         AppStyle.STANDARD -> AppShapes

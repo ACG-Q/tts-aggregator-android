@@ -1,5 +1,6 @@
 package com.pulse.tts.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -24,11 +25,14 @@ import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pulse.tts.data.ThemeSkin
 import com.pulse.tts.data.ThemeStyle
@@ -53,10 +58,12 @@ import com.pulse.tts.ui.theme.InkLightColors
 import com.pulse.tts.ui.theme.LightColors
 import com.pulse.tts.ui.theme.LocalAppStyle
 import com.pulse.tts.ui.theme.ThemePalette
+import com.pulse.tts.ui.theme.dynamicColorAvailable
 import com.pulse.tts.ui.theme.resolveTheme
 import com.pulse.tts.ui.theme.skinLabel
 import com.pulse.tts.ui.theme.styleLabel
 import com.pulse.tts.ui.theme.themeSummary
+import com.pulse.tts.ui.theme.visibleSkins
 import com.pulse.tts.viewmodel.SettingsViewModel
 
 /**
@@ -75,7 +82,8 @@ fun AppearanceScreen(onBack: () -> Unit) {
     val systemDark = isSystemInDarkTheme()
     val style = appSettings.themeStyle
     val skin = appSettings.themeSkin
-    val resolved = resolveTheme(style, skin, systemDark)
+    val dynamicAvailable = dynamicColorAvailable(Build.VERSION.SDK_INT)
+    val resolved = resolveTheme(style, skin, systemDark, dynamicAvailable)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -98,7 +106,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
         ) {
             SectionLabel("预览")
             PreviewCard(
-                palette = resolved.palette,
+                colors = schemeOf(resolved.palette),
                 title = themeSummary(style, skin),
                 subtitle = themeHint(style, skin, systemDark),
             )
@@ -124,10 +132,15 @@ fun AppearanceScreen(onBack: () -> Unit) {
             }
 
             SettingSection("主题") {
-                ThemeSkin.entries.forEachIndexed { index, entry ->
+                visibleSkins(dynamicAvailable).forEachIndexed { index, entry ->
                     if (index > 0) SettingDivider()
                     SettingChoiceRow(
-                        leading = { PaletteSwatch(palette = skinPalette(entry, resolved.dark)) },
+                        leading = {
+                            PaletteSwatch(
+                                colors = schemeOf(skinPalette(entry, resolved.dark)),
+                                ink = entry == ThemeSkin.INK,
+                            )
+                        },
                         title = skinLabel(entry),
                         subtitle = skinHint(entry),
                         selected = skin == entry,
@@ -173,8 +186,7 @@ private fun SectionLabel(title: String) {
  * 背景按主题取渐变或纯色，玻璃主题额外加高光描边。
  */
 @Composable
-private fun PreviewCard(palette: ThemePalette, title: String, subtitle: String) {
-    val colors = paletteColors(palette)
+private fun PreviewCard(colors: ColorScheme, title: String, subtitle: String) {
     val style = LocalAppStyle.current.style
     val shape = MaterialTheme.shapes.medium
     val background = when (style) {
@@ -247,11 +259,31 @@ private fun PreviewCard(palette: ThemePalette, title: String, subtitle: String) 
     }
 }
 
+/** 把调色板解析成实际 ColorScheme；动态色在不可用时退回常规色板。 */
+@Composable
+private fun schemeOf(palette: ThemePalette): ColorScheme {
+    val context = LocalContext.current
+    return when (palette) {
+        ThemePalette.LIGHT -> LightColors
+        ThemePalette.DARK -> DarkColors
+        ThemePalette.INK_LIGHT -> InkLightColors
+        ThemePalette.INK_DARK -> InkDarkColors
+        ThemePalette.DYNAMIC_LIGHT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicLightColorScheme(context)
+        } else {
+            LightColors
+        }
+        ThemePalette.DYNAMIC_DARK -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicDarkColorScheme(context)
+        } else {
+            DarkColors
+        }
+    }
+}
+
 /** 20dp 色板缩略图，尺寸与设置行的图标槽一致 */
 @Composable
-private fun PaletteSwatch(palette: ThemePalette) {
-    val colors = paletteColors(palette)
-    val ink = palette == ThemePalette.INK_LIGHT || palette == ThemePalette.INK_DARK
+private fun PaletteSwatch(colors: ColorScheme, ink: Boolean) {
     Box(
         Modifier
             .size(20.dp)
@@ -286,22 +318,19 @@ private fun styleHint(style: ThemeStyle, systemDark: Boolean): String = when (st
 
 private fun skinHint(skin: ThemeSkin): String = when (skin) {
     ThemeSkin.NORMAL -> "简洁的冷灰背景"
+    ThemeSkin.MATERIAL_YOU -> "跟随壁纸取色，随系统明暗切换"
     ThemeSkin.INK -> "单像素描边，自动关闭动效"
 }
 
 private fun themeHint(style: ThemeStyle, skin: ThemeSkin, systemDark: Boolean): String = when (skin) {
     ThemeSkin.NORMAL -> if (style.isDark(systemDark)) "常规 · 深色界面" else "常规 · 浅色界面"
+    ThemeSkin.MATERIAL_YOU ->
+        if (style.isDark(systemDark)) "Material You · 深色界面" else "Material You · 浅色界面"
     ThemeSkin.INK -> "墨水屏 · 单像素描边，动效已关闭"
 }
 
 private fun skinPalette(skin: ThemeSkin, dark: Boolean): ThemePalette = when (skin) {
     ThemeSkin.NORMAL -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
+    ThemeSkin.MATERIAL_YOU -> if (dark) ThemePalette.DYNAMIC_DARK else ThemePalette.DYNAMIC_LIGHT
     ThemeSkin.INK -> if (dark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT
-}
-
-private fun paletteColors(palette: ThemePalette) = when (palette) {
-    ThemePalette.LIGHT -> LightColors
-    ThemePalette.DARK -> DarkColors
-    ThemePalette.INK_LIGHT -> InkLightColors
-    ThemePalette.INK_DARK -> InkDarkColors
 }

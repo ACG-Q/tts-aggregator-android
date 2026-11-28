@@ -13,7 +13,8 @@ class ThemeResolutionTest {
         style: ThemeStyle,
         skin: ThemeSkin = ThemeSkin.NORMAL,
         systemDark: Boolean = false,
-    ) = resolveTheme(style, skin, systemDark)
+        dynamicAvailable: Boolean = true,
+    ) = resolveTheme(style, skin, systemDark, dynamicAvailable)
 
     @Test
     fun `system follows device darkness`() {
@@ -52,6 +53,52 @@ class ThemeResolutionTest {
         assertEquals(
             ResolvedTheme(AppStyle.INK, true, ThemePalette.INK_DARK),
             resolve(ThemeStyle.DARK, ThemeSkin.INK, systemDark = false),
+        )
+    }
+
+    @Test
+    fun `material you uses dynamic palette when available`() {
+        assertEquals(
+            ResolvedTheme(AppStyle.STANDARD, false, ThemePalette.DYNAMIC_LIGHT),
+            resolve(ThemeStyle.LIGHT, ThemeSkin.MATERIAL_YOU, systemDark = true),
+        )
+        assertEquals(
+            ResolvedTheme(AppStyle.STANDARD, true, ThemePalette.DYNAMIC_DARK),
+            resolve(ThemeStyle.DARK, ThemeSkin.MATERIAL_YOU, systemDark = false),
+        )
+        assertEquals(
+            ResolvedTheme(AppStyle.STANDARD, true, ThemePalette.DYNAMIC_DARK),
+            resolve(ThemeStyle.SYSTEM, ThemeSkin.MATERIAL_YOU, systemDark = true),
+        )
+    }
+
+    @Test
+    fun `material you falls back to normal palette without dynamic color`() {
+        assertEquals(
+            ResolvedTheme(AppStyle.STANDARD, false, ThemePalette.LIGHT),
+            resolve(ThemeStyle.LIGHT, ThemeSkin.MATERIAL_YOU, dynamicAvailable = false),
+        )
+        assertEquals(
+            ResolvedTheme(AppStyle.STANDARD, true, ThemePalette.DARK),
+            resolve(ThemeStyle.DARK, ThemeSkin.MATERIAL_YOU, dynamicAvailable = false),
+        )
+    }
+
+    @Test
+    fun `dynamic color requires android 12`() {
+        assertFalse(dynamicColorAvailable(30))
+        assertTrue(dynamicColorAvailable(31))
+    }
+
+    @Test
+    fun `material you is hidden without dynamic color`() {
+        assertEquals(
+            listOf(ThemeSkin.NORMAL, ThemeSkin.MATERIAL_YOU, ThemeSkin.INK),
+            visibleSkins(dynamicAvailable = true),
+        )
+        assertEquals(
+            listOf(ThemeSkin.NORMAL, ThemeSkin.INK),
+            visibleSkins(dynamicAvailable = false),
         )
     }
 }

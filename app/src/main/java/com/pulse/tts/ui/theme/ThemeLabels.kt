@@ -13,6 +13,7 @@ internal fun styleLabel(style: ThemeStyle): String = when (style) {
 
 internal fun skinLabel(skin: ThemeSkin): String = when (skin) {
     ThemeSkin.NORMAL -> "常规"
+    ThemeSkin.MATERIAL_YOU -> "Material You"
     ThemeSkin.INK -> "墨水屏"
 }
 

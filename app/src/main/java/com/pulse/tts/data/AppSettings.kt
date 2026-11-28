@@ -21,6 +21,7 @@ enum class ThemeStyle {
 @Serializable
 enum class ThemeSkin {
     NORMAL,
+    MATERIAL_YOU,
     INK,
 }
 

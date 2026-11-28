@@ -30,6 +30,7 @@ import com.pulse.tts.tts.SystemReadingEntry
 import com.pulse.tts.ui.ProvideAppContainer
 import com.pulse.tts.ui.components.ProvideAppHaptics
 import com.pulse.tts.ui.theme.AppTheme
+import com.pulse.tts.ui.theme.dynamicColorAvailable
 import com.pulse.tts.ui.theme.resolveTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,7 +61,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appSettings by container.settings.appSettings.collectAsState()
             val systemDark = isSystemInDarkTheme()
-            val resolved = resolveTheme(appSettings.themeStyle, appSettings.themeSkin, systemDark)
+            val resolved = resolveTheme(
+                appSettings.themeStyle,
+                appSettings.themeSkin,
+                systemDark,
+                dynamicColorAvailable(Build.VERSION.SDK_INT),
+            )
 
             AppTheme(
                 style = appSettings.themeStyle,

@@ -11,8 +11,15 @@ import com.pulse.tts.data.ThemeStyle
 /** 视觉风格：标准、墨水屏。 */
 internal enum class AppStyle { STANDARD, INK }
 
-/** 具体色板；墨水屏带明暗两套，跟随样式切换。 */
-internal enum class ThemePalette { LIGHT, DARK, INK_LIGHT, INK_DARK }
+/** 具体色板；墨水屏与动态取色各带明暗两套，跟随样式切换。 */
+internal enum class ThemePalette {
+    LIGHT,
+    DARK,
+    INK_LIGHT,
+    INK_DARK,
+    DYNAMIC_LIGHT,
+    DYNAMIC_DARK,
+}
 
 /** 主题的解析结果：风格 + 实际深浅 + 色板。 */
 internal data class ResolvedTheme(
@@ -21,19 +28,32 @@ internal data class ResolvedTheme(
     val palette: ThemePalette,
 )
 
+/** 动态取色需要 Android 12（API 31）。 */
+internal fun dynamicColorAvailable(sdkInt: Int): Boolean = sdkInt >= 31
+
+/** 外观页可见的主题；动态取色不可用时整行隐藏。 */
+internal fun visibleSkins(dynamicAvailable: Boolean): List<ThemeSkin> =
+    ThemeSkin.entries.filter { it != ThemeSkin.MATERIAL_YOU || dynamicAvailable }
+
 /** 样式决定明暗，主题决定风格；两者独立组合。 */
 internal fun resolveTheme(
     style: ThemeStyle,
     skin: ThemeSkin,
     systemDark: Boolean,
+    dynamicAvailable: Boolean,
 ): ResolvedTheme {
     val dark = style.isDark(systemDark)
     val appStyle = when (skin) {
-        ThemeSkin.NORMAL -> AppStyle.STANDARD
+        ThemeSkin.NORMAL, ThemeSkin.MATERIAL_YOU -> AppStyle.STANDARD
         ThemeSkin.INK -> AppStyle.INK
     }
     val palette = when (skin) {
         ThemeSkin.NORMAL -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
+        ThemeSkin.MATERIAL_YOU -> when {
+            !dynamicAvailable -> if (dark) ThemePalette.DARK else ThemePalette.LIGHT
+            dark -> ThemePalette.DYNAMIC_DARK
+            else -> ThemePalette.DYNAMIC_LIGHT
+        }
         ThemeSkin.INK -> if (dark) ThemePalette.INK_DARK else ThemePalette.INK_LIGHT
     }
     return ResolvedTheme(appStyle, dark, palette)
