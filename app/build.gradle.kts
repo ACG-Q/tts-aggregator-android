@@ -5,7 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
 }
 
-val appVersionName = "1.1.0-beta.3"
+val appVersionName = "1.1.0-beta.4"
 
 /** 默认主题：-PpulseDefaultTheme=ink 打默认墨水屏的包（只影响首次安装） */
 val defaultInkTheme = providers.gradleProperty("pulseDefaultTheme")
